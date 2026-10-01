@@ -1,0 +1,2053 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ResumeLift — AI Resume Analyzer for Students & Job Seekers</title>
+<meta name="description" content="ResumeLift analyzes your resume for ATS, skills, formatting and job match — then tells you exactly what to fix next." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        display: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      },
+      colors: {
+        ink: '#0F0E17',
+        cream: '#FAF8F4',
+        sand: '#F1ECE3',
+        indigo: { brand: '#4F46E5', deep: '#3A33B0', soft: '#EEF0FF' },
+        clay: '#E76F51',
+        sage: '#5B8C7B',
+        amber: { brand: '#E8A33D', soft: '#FDF4E1' },
+        rose: { brand: '#D6577A', soft: '#FBE9EF' },
+      },
+      boxShadow: {
+        soft: '0 1px 2px rgba(15,14,23,0.04), 0 8px 24px -8px rgba(15,14,23,0.08)',
+        ring: '0 0 0 1px rgba(79,70,229,0.12), 0 12px 32px -12px rgba(79,70,229,0.25)',
+        card: '0 1px 0 rgba(15,14,23,0.04), 0 2px 8px -2px rgba(15,14,23,0.06)',
+      }
+    }
+  }
+}
+</script>
+<style>
+  :root{
+    --ink:#0F0E17;
+    --cream:#FAF8F4;
+    --sand:#F1ECE3;
+    --brand:#4F46E5;
+    --brand-deep:#3A33B0;
+    --brand-soft:#EEF0FF;
+    --clay:#E76F51;
+    --sage:#5B8C7B;
+    --amber:#E8A33D;
+    --rose:#D6577A;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--cream);color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .font-display{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+  .font-mono{font-family:'JetBrains Mono',monospace}
+
+  /* Focus ring */
+  a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{
+    outline:2px solid var(--brand);outline-offset:2px;border-radius:6px;
+  }
+
+  /* Grain texture */
+  .grain::before{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.18'/%3E%3C/svg%3E");
+  }
+
+  /* Page transitions */
+  .page{display:none;animation:fade .5s ease}
+  .page.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* Score ring */
+  .ring-bg{stroke:rgba(15,14,23,0.08)}
+  .ring-fg{stroke:var(--brand);stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)}
+
+  /* Marquee */
+  @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .marquee{animation:marquee 30s linear infinite}
+
+  /* Blob */
+  @keyframes blob{
+    0%,100%{border-radius:42% 58% 63% 37%/41% 44% 56% 59%}
+    50%{border-radius:58% 42% 37% 63%/56% 59% 41% 44%}
+  }
+  .blob{animation:blob 14s ease-in-out infinite}
+
+  /* Floating */
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  .float{animation:float 6s ease-in-out infinite}
+
+  /* Pulse dot */
+  @keyframes pulseDot{0%{box-shadow:0 0 0 0 rgba(91,140,123,.5)}70%{box-shadow:0 0 0 8px rgba(91,140,123,0)}100%{box-shadow:0 0 0 0 rgba(91,140,123,0)}}
+  .pulse-dot{animation:pulseDot 2s infinite}
+
+  /* Stage dots */
+  @keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  .scan-bar{position:relative;overflow:hidden}
+  .scan-bar::after{content:"";position:absolute;top:0;left:0;height:100%;width:30%;background:linear-gradient(90deg,transparent,rgba(79,70,229,.35),transparent);animation:scan 1.6s infinite}
+
+  /* Chip */
+  .chip{transition:all .15s ease}
+  .chip:hover{transform:translateY(-1px)}
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(15,14,23,.15);border-radius:8px;border:2px solid var(--cream)}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(15,14,23,.25)}
+
+  /* Skeleton shimmer */
+  @keyframes shimmer{100%{transform:translateX(100%)}}
+  .shimmer{position:relative;overflow:hidden;background:rgba(15,14,23,.05)}
+  .shimmer::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:shimmer 1.4s infinite}
+
+  .step-line{background:linear-gradient(180deg,var(--brand) var(--p,0%),rgba(15,14,23,.1) 0%)}
+
+  .underline-grow{background-image:linear-gradient(var(--brand),var(--brand));background-size:0% 2px;background-repeat:no-repeat;background-position:left 100%;transition:background-size .3s ease}
+  .underline-grow:hover{background-size:100% 2px}
+
+  .tab-active{color:var(--brand);border-color:var(--brand)}
+
+  /* Accordion */
+  .acc-body{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.2,.8,.2,1)}
+
+  .drag-active{border-color:var(--brand)!important;background:var(--brand-soft)!important}
+
+  /* score gauge color helpers */
+  .s-good{color:#2F8F6B}
+  .s-mid{color:#C68A1E}
+  .s-low{color:#C0444E}
+  .s-miss{color:#9A9491}
+
+  .badge-good{background:#E8F3EE;color:#2F8F6B}
+  .badge-mid{background:#FBF1DC;color:#946A12}
+  .badge-low{background:#FBE5E6;color:#B33B45}
+  .badge-miss{background:#EDEAE6;color:#6F6962}
+  .badge-na{background:#EDEAE6;color:#6F6962}
+
+  .grid-paper{
+    background-image:linear-gradient(rgba(15,14,23,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(15,14,23,.04) 1px,transparent 1px);
+    background-size:24px 24px;
+  }
+
+  /* Resume mock lines */
+  .rline{height:8px;border-radius:4px;background:rgba(15,14,23,.08)}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ===== NAV ===== -->
+<header id="nav" class="sticky top-0 z-50 bg-cream/80 backdrop-blur-md border-b border-ink/5">
+  <div class="max-w-7xl mx-auto px-5 sm:px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="#" data-route="landing" class="flex items-center gap-2.5 group">
+        <span class="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-ink text-cream overflow-hidden">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><path d="M18 18l3 3" stroke="#E8A33D" stroke-width="2.4"/><circle cx="20" cy="20" r="0" fill="#E8A33D"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">Resume<span class="text-indigo-brand">Lift</span></span>
+      </a>
+
+      <nav class="hidden lg:flex items-center gap-1">
+        <a href="#" data-route="landing" class="nav-link px-3.5 py-2 text-sm font-medium text-ink/70 hover:text-ink rounded-lg hover:bg-ink/5 transition">Home</a>
+        <a href="#" data-route="analyze" class="nav-link px-3.5 py-2 text-sm font-medium text-ink/70 hover:text-ink rounded-lg hover:bg-ink/5 transition">Analyze</a>
+        <a href="#" data-route="dashboard" class="nav-link px-3.5 py-2 text-sm font-medium text-ink/70 hover:text-ink rounded-lg hover:bg-ink/5 transition">Dashboard</a>
+        <a href="#" data-route="interview" class="nav-link px-3.5 py-2 text-sm font-medium text-ink/70 hover:text-ink rounded-lg hover:bg-ink/5 transition">Interview Prep</a>
+        <a href="#" data-route="history" class="nav-link px-3.5 py-2 text-sm font-medium text-ink/70 hover:text-ink rounded-lg hover:bg-ink/5 transition">History</a>
+        <a href="#" data-route="help" class="nav-link px-3.5 py-2 text-sm font-medium text-ink/70 hover:text-ink rounded-lg hover:bg-ink/5 transition">Help</a>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <a href="#" data-route="analyze" class="inline-flex items-center gap-1.5 bg-ink text-cream px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-ink/90 transition shadow-soft">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Analyze Resume
+        </a>
+        <button id="menuBtn" class="lg:hidden p-2 rounded-lg hover:bg-ink/5" aria-label="Open menu">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- mobile menu -->
+    <div id="mobileMenu" class="lg:hidden hidden pb-4 border-t border-ink/5 pt-3">
+      <div class="flex flex-col gap-1">
+        <a href="#" data-route="landing" class="px-3 py-2.5 rounded-lg hover:bg-ink/5 text-sm font-medium">Home</a>
+        <a href="#" data-route="analyze" class="px-3 py-2.5 rounded-lg hover:bg-ink/5 text-sm font-medium">Analyze</a>
+        <a href="#" data-route="dashboard" class="px-3 py-2.5 rounded-lg hover:bg-ink/5 text-sm font-medium">Dashboard</a>
+        <a href="#" data-route="interview" class="px-3 py-2.5 rounded-lg hover:bg-ink/5 text-sm font-medium">Interview Prep</a>
+        <a href="#" data-route="history" class="px-3 py-2.5 rounded-lg hover:bg-ink/5 text-sm font-medium">History</a>
+        <a href="#" data-route="help" class="px-3 py-2.5 rounded-lg hover:bg-ink/5 text-sm font-medium">Help</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- ============================ LANDING ============================ -->
+  <section id="page-landing" class="page active">
+    <!-- HERO -->
+    <div class="relative overflow-hidden grain">
+      <div class="absolute -top-40 -right-40 w-[520px] h-[520px] bg-indigo-brand/20 blob blur-3xl"></div>
+      <div class="absolute top-20 -left-32 w-80 h-80 bg-amber-soft blob blur-3xl opacity-70"></div>
+
+      <div class="relative max-w-7xl mx-auto px-5 sm:px-8 pt-16 pb-20 lg:pt-24 lg:pb-28">
+        <div class="grid lg:grid-cols-12 gap-12 items-center">
+          <div class="lg:col-span-6">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-ink/5 text-xs font-medium text-ink/70 mb-6">
+              <span class="w-1.5 h-1.5 rounded-full bg-sage pulse-dot"></span>
+              For students, freshers & first-time job seekers
+            </span>
+            <h1 class="font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.02] tracking-tight">
+              Stop guessing<br>what's wrong<br>with your resume.
+            </h1>
+            <p class="mt-6 text-lg text-ink/70 max-w-xl leading-relaxed">
+              ResumeLift reads your resume the way an ATS and a recruiter would — then tells you, in plain English, the next thing to fix. No jargon. No premium unlocks halfway through.
+            </p>
+            <div class="mt-8 flex flex-wrap gap-3">
+              <a href="#" data-route="analyze" class="inline-flex items-center gap-2 bg-indigo-brand text-white px-6 py-3.5 rounded-xl font-semibold shadow-ring hover:bg-indigo-deep transition">
+                Analyze my resume
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14m0 0l-5-5m5 5l-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a href="#" data-route="dashboard" class="inline-flex items-center gap-2 bg-white border border-ink/10 px-6 py-3.5 rounded-xl font-semibold hover:bg-ink/5 transition">
+                See sample report
+              </a>
+            </div>
+            <div class="mt-6 flex items-center gap-5 text-xs text-ink/50">
+              <span class="flex items-center gap-1.5"><svg class="w-4 h-4 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Free for students</span>
+              <span class="flex items-center gap-1.5"><svg class="w-4 h-4 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>No signup to try a sample</span>
+              <span class="flex items-center gap-1.5"><svg class="w-4 h-4 text-sage" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Your file is yours</span>
+            </div>
+          </div>
+
+          <!-- Resume mockup -->
+          <div class="lg:col-span-6">
+            <div class="relative mx-auto max-w-md float">
+              <!-- score card -->
+              <div class="absolute -top-6 -left-6 z-20 bg-white rounded-2xl shadow-ring p-4 w-44 border border-ink/5">
+                <div class="text-[11px] font-semibold text-ink/50 uppercase tracking-wider">Estimated score</div>
+                <div class="flex items-end gap-1 mt-1">
+                  <span class="font-display text-4xl font-bold leading-none">72</span>
+                  <span class="text-sm text-ink/40 mb-0.5">/100</span>
+                </div>
+                <div class="mt-2 flex gap-1">
+                  <span class="flex-1 h-1.5 rounded-full bg-rose-brand/80"></span>
+                  <span class="flex-1 h-1.5 rounded-full bg-amber-brand/80"></span>
+                  <span class="flex-1 h-1.5 rounded-full bg-amber-brand/80"></span>
+                  <span class="flex-1 h-1.5 rounded-full bg-sage/80"></span>
+                  <span class="flex-1 h-1.5 rounded-full bg-ink/10"></span>
+                </div>
+                <div class="mt-2 text-[11px] text-ink/60">Good start · 6 fixes to go</div>
+              </div>
+
+              <!-- resume paper -->
+              <div class="relative bg-white rounded-2xl shadow-ring border border-ink/5 p-6 rotate-[-2deg]">
+                <div class="flex items-center gap-3 pb-3 border-b border-ink/5">
+                  <div class="w-10 h-10 rounded-full bg-indigo-soft flex items-center justify-center text-indigo-brand font-display font-bold text-sm">AR</div>
+                  <div>
+                    <div class="rline w-24"></div>
+                    <div class="rline w-32 mt-1.5" style="height:6px"></div>
+                  </div>
+                </div>
+                <div class="mt-4 space-y-2">
+                  <div class="rline w-16" style="height:6px;background:rgba(15,14,23,.15)"></div>
+                  <div class="rline w-full"></div>
+                  <div class="rline w-full"></div>
+                  <div class="rline w-4/5"></div>
+                  <div class="rline w-2/3"></div>
+                </div>
+                <div class="mt-5 space-y-2">
+                  <div class="rline w-20" style="height:6px;background:rgba(15,14,23,.15)"></div>
+                  <div class="flex gap-1.5 flex-wrap">
+                    <div class="h-5 w-16 rounded bg-indigo-soft"></div>
+                    <div class="h-5 w-20 rounded bg-amber-soft"></div>
+                    <div class="h-5 w-14 rounded bg-rose-soft"></div>
+                    <div class="h-5 w-24 rounded bg-indigo-soft"></div>
+                  </div>
+                </div>
+                <div class="mt-5 space-y-2">
+                  <div class="rline w-14" style="height:6px;background:rgba(15,14,23,.15)"></div>
+                  <div class="rline w-full"></div>
+                  <div class="rline w-11/12"></div>
+                  <div class="rline w-3/4"></div>
+                </div>
+                <div class="mt-5 grid grid-cols-2 gap-3">
+                  <div class="space-y-1.5">
+                    <div class="rline w-12" style="height:6px;background:rgba(15,14,23,.15)"></div>
+                    <div class="rline w-full"></div>
+                    <div class="rline w-4/5"></div>
+                  </div>
+                  <div class="space-y-1.5">
+                    <div class="rline w-12" style="height:6px;background:rgba(15,14,23,.15)"></div>
+                    <div class="rline w-full"></div>
+                    <div class="rline w-3/5"></div>
+                  </div>
+                </div>
+                <!-- highlight: missing link -->
+                <div class="absolute right-5 bottom-16">
+                  <div class="bg-rose-soft text-rose-brand text-[10px] font-semibold px-2 py-1 rounded-md flex items-center gap-1 shadow-soft">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 8v4m0 4h.01" stroke-linecap="round"/></svg>
+                    Missing GitHub link
+                  </div>
+                </div>
+              </div>
+              <!-- mini insight card -->
+              <div class="absolute -bottom-6 -right-4 z-20 bg-ink text-cream rounded-2xl shadow-ring p-4 w-52">
+                <div class="text-[11px] uppercase tracking-wider text-cream/50 font-semibold">Top priority fix</div>
+                <div class="mt-1.5 text-sm leading-snug">Add measurable impact to your 2 project bullets — recruiters scan for numbers.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- trust marquee -->
+    <div class="border-y border-ink/5 bg-sand/40 overflow-hidden">
+      <div class="max-w-7xl mx-auto px-5 sm:px-8 py-4 flex items-center gap-8">
+        <span class="text-xs font-medium text-ink/50 shrink-0">Built for resumes targeting →</span>
+        <div class="overflow-hidden flex-1">
+          <div class="flex gap-10 marquee whitespace-nowrap text-ink/60 font-display text-lg">
+            <span>Google</span><span>Microsoft</span><span>Amazon</span><span>TCS</span><span>Infosys</span><span>Accenture</span><span>Deloitte</span><span>Goldman Sachs</span><span>Swiggy</span><span>Zomato</span><span>Flipkart</span>
+            <span>Google</span><span>Microsoft</span><span>Amazon</span><span>TCS</span><span>Infosys</span><span>Accenture</span><span>Deloitte</span><span>Goldman Sachs</span><span>Swiggy</span><span>Zomato</span><span>Flipkart</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-20 lg:py-28">
+      <div class="text-center max-w-2xl mx-auto mb-14">
+        <span class="text-xs font-semibold tracking-wider uppercase text-indigo-brand">How it works</span>
+        <h2 class="font-display text-4xl sm:text-5xl font-bold mt-3 tracking-tight">Four steps. Then you're done.</h2>
+        <p class="text-ink/60 mt-4">Beginners never guess the next step — every screen tells you exactly what to do.</p>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="relative bg-white rounded-2xl border border-ink/8 p-6 shadow-card hover:shadow-soft transition">
+          <div class="w-10 h-10 rounded-xl bg-indigo-soft text-indigo-brand flex items-center justify-center font-display font-bold">01</div>
+          <h3 class="font-display text-xl font-semibold mt-4">Upload your resume</h3>
+          <p class="text-sm text-ink/60 mt-2 leading-relaxed">Drag a PDF or DOCX. We don't make you fill out a form first.</p>
+        </div>
+        <div class="relative bg-white rounded-2xl border border-ink/8 p-6 shadow-card hover:shadow-soft transition">
+          <div class="w-10 h-10 rounded-xl bg-amber-soft text-amber-brand flex items-center justify-center font-display font-bold">02</div>
+          <h3 class="font-display text-xl font-semibold mt-4">Pick a goal</h3>
+          <p class="text-sm text-ink/60 mt-2 leading-relaxed">College, internship, or full-time role — we adjust the bar accordingly.</p>
+        </div>
+        <div class="relative bg-white rounded-2xl border border-ink/8 p-6 shadow-card hover:shadow-soft transition">
+          <div class="w-10 h-10 rounded-xl bg-rose-soft text-rose-brand flex items-center justify-center font-display font-bold">03</div>
+          <h3 class="font-display text-xl font-semibold mt-4">Target the role</h3>
+          <p class="text-sm text-ink/60 mt-2 leading-relaxed">Paste the job description (optional) for a side-by-side match score.</p>
+        </div>
+        <div class="relative bg-white rounded-2xl border border-ink/8 p-6 shadow-card hover:shadow-soft transition">
+          <div class="w-10 h-10 rounded-xl bg-sage/15 text-sage flex items-center justify-center font-display font-bold">04</div>
+          <h3 class="font-display text-xl font-semibold mt-4">Get the fix list</h3>
+          <p class="text-sm text-ink/60 mt-2 leading-relaxed">Prioritized fixes, missing skills, ATS risks — then prep for interviews.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="bg-ink text-cream relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-brand/30 blob blur-3xl"></div>
+      <div class="relative max-w-7xl mx-auto px-5 sm:px-8 py-20 lg:py-28">
+        <div class="grid lg:grid-cols-12 gap-12">
+          <div class="lg:col-span-4">
+            <span class="text-xs font-semibold tracking-wider uppercase text-amber-brand">What you get</span>
+            <h2 class="font-display text-4xl sm:text-5xl font-bold mt-3 tracking-tight">More than a score.<br>A second opinion.</h2>
+            <p class="text-cream/60 mt-5 leading-relaxed">Every category comes with <em class="not-italic text-amber-brand font-medium">"Why this score?"</em> — strengths, issues, and the exact next move.</p>
+            <a href="#" data-route="analyze" class="mt-8 inline-flex items-center gap-2 text-amber-brand font-semibold underline-grow">
+              Start a free analysis →
+            </a>
+          </div>
+          <div class="lg:col-span-8 grid sm:grid-cols-2 gap-4">
+            <div class="bg-cream/5 border border-cream/10 rounded-2xl p-5 backdrop-blur">
+              <div class="w-9 h-9 rounded-lg bg-indigo-brand/20 flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-cream" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v6H4zM4 14h16v6H4z" stroke-linejoin="round"/><path d="M8 7h.01M8 17h.01"/></svg>
+              </div>
+              <h3 class="font-display text-lg font-semibold">ATS parsing check</h3>
+              <p class="text-sm text-cream/60 mt-1.5">Flags columns, tables, images, and fonts that break applicant tracking systems.</p>
+            </div>
+            <div class="bg-cream/5 border border-cream/10 rounded-2xl p-5 backdrop-blur">
+              <div class="w-9 h-9 rounded-lg bg-amber-brand/20 flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-cream" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5z" stroke-linejoin="round"/></svg>
+              </div>
+              <h3 class="font-display text-lg font-semibold">Skill gap radar</h3>
+              <p class="text-sm text-cream/60 mt-1.5">See which skills the job expects but your resume is missing — ranked by importance.</p>
+            </div>
+            <div class="bg-cream/5 border border-cream/10 rounded-2xl p-5 backdrop-blur">
+              <div class="w-9 h-9 rounded-lg bg-rose-brand/20 flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-cream" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.5 1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.5-1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <h3 class="font-display text-lg font-semibold">Missing links</h3>
+              <p class="text-sm text-cream/60 mt-1.5">GitHub, LinkedIn, portfolio — recruiters click. We tell you which ones are missing.</p>
+            </div>
+            <div class="bg-cream/5 border border-cream/10 rounded-2xl p-5 backdrop-blur">
+              <div class="w-9 h-9 rounded-lg bg-sage/25 flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-cream" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v4M16 3v4M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" stroke-linejoin="round"/></svg>
+              </div>
+              <h3 class="font-display text-lg font-semibold">Interview prep</h3>
+              <p class="text-sm text-cream/60 mt-1.5">Practice questions pulled from your resume — technical, HR, project, skill, and role.</p>
+            </div>
+            <div class="bg-cream/5 border border-cream/10 rounded-2xl p-5 backdrop-blur">
+              <div class="w-9 h-9 rounded-lg bg-indigo-brand/20 flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-cream" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0118 0M3 12a9 9 0 0018 0M3 12h18" stroke-linecap="round"/></svg>
+              </div>
+              <h3 class="font-display text-lg font-semibold">Before vs after</h3>
+              <p class="text-sm text-cream/60 mt-1.5">Re-upload an improved version and see exactly what got better — and what didn't.</p>
+            </div>
+            <div class="bg-cream/5 border border-cream/10 rounded-2xl p-5 backdrop-blur">
+              <div class="w-9 h-9 rounded-lg bg-cream/10 flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-cream" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-12V5l-8-3-8 3v5c0 8 8 12 8 12z" stroke-linejoin="round"/></svg>
+              </div>
+              <h3 class="font-display text-lg font-semibold">Honest privacy</h3>
+              <p class="text-sm text-cream/60 mt-1.5">Your file is processed, scored, then deletable in one click. No vague security claims.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORT PREVIEW -->
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-20 lg:py-28">
+      <div class="grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-5">
+          <span class="text-xs font-semibold tracking-wider uppercase text-indigo-brand">Report preview</span>
+          <h2 class="font-display text-4xl sm:text-5xl font-bold mt-3 tracking-tight">A report you can actually act on.</h2>
+          <p class="text-ink/60 mt-5 leading-relaxed">Most tools give you a number and walk away. ResumeLift breaks the score into 11 categories — each with strengths, issues, and fixes you can copy today.</p>
+          <ul class="mt-6 space-y-3 text-sm">
+            <li class="flex items-start gap-3"><span class="mt-0.5 w-5 h-5 rounded-full bg-sage/15 text-sage flex items-center justify-center shrink-0"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>11 category scores with status badges (Good / Needs work / Missing)</li>
+            <li class="flex items-start gap-3"><span class="mt-0.5 w-5 h-5 rounded-full bg-sage/15 text-sage flex items-center justify-center shrink-0"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Prioritized fix list — do this first, that second</li>
+            <li class="flex items-start gap-3"><span class="mt-0.5 w-5 h-5 rounded-full bg-sage/15 text-sage flex items-center justify-center shrink-0"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Job match side-by-side with the JD you pasted</li>
+            <li class="flex items-start gap-3"><span class="mt-0.5 w-5 h-5 rounded-full bg-sage/15 text-sage flex items-center justify-center shrink-0"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Practice interview questions from your own resume</li>
+          </ul>
+          <a href="#" data-route="dashboard" class="mt-8 inline-flex items-center gap-2 bg-ink text-cream px-5 py-3 rounded-xl font-semibold hover:bg-ink/90 transition">
+            Open the sample dashboard
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m0 0l-5-5m5 5l-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+        <div class="lg:col-span-7">
+          <div class="relative grid grid-cols-2 gap-4">
+            <div class="bg-white rounded-2xl border border-ink/8 p-5 shadow-soft">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-ink/50 uppercase tracking-wider">ATS</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full badge-mid">Needs work</span>
+              </div>
+              <div class="flex items-end gap-2 mt-3">
+                <span class="font-display text-3xl font-bold">64</span>
+                <span class="text-xs text-ink/40 mb-1">/100</span>
+              </div>
+              <p class="text-xs text-ink/60 mt-2">Two-column layout risks parser confusion.</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-ink/8 p-5 shadow-soft">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-ink/50 uppercase tracking-wider">Skills</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full badge-good">Good</span>
+              </div>
+              <div class="flex items-end gap-2 mt-3">
+                <span class="font-display text-3xl font-bold">81</span>
+                <span class="text-xs text-ink/40 mb-1">/100</span>
+              </div>
+              <p class="text-xs text-ink/60 mt-2">Strong core skills, missing Docker & AWS.</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-ink/8 p-5 shadow-soft">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-ink/50 uppercase tracking-wider">Job match</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full badge-mid">Needs work</span>
+              </div>
+              <div class="flex items-end gap-2 mt-3">
+                <span class="font-display text-3xl font-bold">68</span>
+                <span class="text-xs text-ink/40 mb-1">/100</span>
+              </div>
+              <div class="mt-2 flex gap-1">
+                <div class="flex-1 h-1.5 rounded-full bg-sage"></div>
+                <div class="flex-1 h-1.5 rounded-full bg-sage"></div>
+                <div class="flex-1 h-1.5 rounded-full bg-amber-brand"></div>
+                <div class="flex-1 h-1.5 rounded-full bg-rose-brand"></div>
+                <div class="flex-1 h-1.5 rounded-full bg-ink/10"></div>
+              </div>
+            </div>
+            <div class="bg-ink text-cream rounded-2xl p-5 shadow-soft">
+              <span class="text-xs font-semibold text-cream/50 uppercase tracking-wider">Priority fixes</span>
+              <ol class="mt-3 space-y-2 text-sm">
+                <li class="flex gap-2"><span class="text-amber-brand font-bold">1.</span>Switch to single-column layout</li>
+                <li class="flex gap-2"><span class="text-amber-brand font-bold">2.</span>Add GitHub link in header</li>
+                <li class="flex gap-2"><span class="text-amber-brand font-bold">3.</span>Quantify project impact</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRIVACY NOTE -->
+    <div class="bg-sand/50 border-y border-ink/5">
+      <div class="max-w-7xl mx-auto px-5 sm:px-8 py-16">
+        <div class="grid md:grid-cols-3 gap-8 items-center">
+          <div class="md:col-span-1">
+            <div class="w-12 h-12 rounded-2xl bg-white border border-ink/8 flex items-center justify-center shadow-soft">
+              <svg class="w-6 h-6 text-indigo-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-12V5l-8-3-8 3v5c0 8 8 12 8 12z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h2 class="font-display text-3xl font-bold mt-4 tracking-tight">Your resume is yours.</h2>
+          </div>
+          <div class="md:col-span-2 grid sm:grid-cols-3 gap-6 text-sm">
+            <div>
+              <div class="font-semibold mb-1.5">Processed, not stored</div>
+              <p class="text-ink/60 leading-relaxed">Your file is parsed in-memory to produce the score. We don't keep the original document unless you save it to history.</p>
+            </div>
+            <div>
+              <div class="font-semibold mb-1.5">Delete any time</div>
+              <p class="text-ink/60 leading-relaxed">One click in History removes a saved version and all its analysis — permanently.</p>
+            </div>
+            <div>
+              <div class="font-semibold mb-1.5">No training on you</div>
+              <p class="text-ink/60 leading-relaxed">We don't use your resume content to train models. Read the full <a href="#" data-route="privacy" class="text-indigo-brand font-medium underline-grow">privacy policy</a>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="max-w-4xl mx-auto px-5 sm:px-8 py-20 lg:py-28">
+      <div class="text-center mb-12">
+        <span class="text-xs font-semibold tracking-wider uppercase text-indigo-brand">FAQ</span>
+        <h2 class="font-display text-4xl sm:text-5xl font-bold mt-3 tracking-tight">Questions, answered honestly.</h2>
+      </div>
+      <div id="faq-landing" class="space-y-3">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- FINAL CTA -->
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 pb-24">
+      <div class="relative overflow-hidden rounded-3xl bg-indigo-brand text-white p-10 sm:p-16 text-center shadow-ring">
+        <div class="absolute -top-20 -left-20 w-80 h-80 bg-white/10 blob blur-2xl"></div>
+        <div class="absolute -bottom-24 -right-10 w-72 h-72 bg-amber-brand/30 blob blur-2xl"></div>
+        <div class="relative">
+          <h2 class="font-display text-4xl sm:text-5xl font-bold tracking-tight">Your next fix is one upload away.</h2>
+          <p class="text-white/80 mt-4 max-w-xl mx-auto">No credit card. No "upgrade to see skills." Just an honest analysis of your resume and the next thing to do.</p>
+          <a href="#" data-route="analyze" class="mt-8 inline-flex items-center gap-2 bg-white text-indigo-brand px-7 py-4 rounded-xl font-bold hover:bg-cream transition shadow-soft">
+            Analyze my resume — free
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14m0 0l-5-5m5 5l-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ ANALYZE WIZARD ============================ -->
+  <section id="page-analyze" class="page">
+    <div class="max-w-3xl mx-auto px-5 sm:px-8 py-10 lg:py-16">
+      <!-- progress -->
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs font-semibold tracking-wider uppercase text-indigo-brand">Analyze wizard</span>
+        <span id="wizStepCount" class="text-xs text-ink/50 font-medium">Step 1 of 4</span>
+      </div>
+      <h1 class="font-display text-3xl sm:text-4xl font-bold tracking-tight">Let's get your resume lifted.</h1>
+      <p class="text-ink/60 mt-2">This takes about 90 seconds. You can edit anything later.</p>
+
+      <!-- step bar -->
+      <div class="mt-8 flex gap-2">
+        <div class="flex-1 h-1.5 rounded-full bg-indigo-brand" data-stepbar="1"></div>
+        <div class="flex-1 h-1.5 rounded-full bg-ink/10" data-stepbar="2"></div>
+        <div class="flex-1 h-1.5 rounded-full bg-ink/10" data-stepbar="3"></div>
+        <div class="flex-1 h-1.5 rounded-full bg-ink/10" data-stepbar="4"></div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div class="wiz-step mt-10" data-step="1">
+        <h2 class="font-display text-2xl font-semibold">What's your goal?</h2>
+        <p class="text-ink/60 mt-1 text-sm">We tune expectations to where you are in your journey.</p>
+        <div class="mt-6 grid sm:grid-cols-2 gap-4">
+          <button class="goal-card text-left p-5 rounded-2xl border-2 border-ink/8 bg-white hover:border-indigo-brand hover:shadow-soft transition group" data-goal="student">
+            <div class="flex items-center justify-between">
+              <div class="w-11 h-11 rounded-xl bg-indigo-soft text-indigo-brand flex items-center justify-center">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-5 9 5-9 5-9-5z" stroke-linejoin="round"/><path d="M7 11v5c0 1 2 3 5 3s5-2 5-3v-5" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="text-[10px] font-semibold text-indigo-brand opacity-0 group-hover:opacity-100 transition">SELECT</span>
+            </div>
+            <h3 class="font-display text-xl font-semibold mt-4">College / Student</h3>
+            <p class="text-sm text-ink/60 mt-1">Internships, campus placements, first-role applications, M.Tech / MS abroad.</p>
+          </button>
+          <button class="goal-card text-left p-5 rounded-2xl border-2 border-ink/8 bg-white hover:border-indigo-brand hover:shadow-soft transition group" data-goal="professional">
+            <div class="flex items-center justify-between">
+              <div class="w-11 h-11 rounded-xl bg-amber-soft text-amber-brand flex items-center justify-center">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7h-3V5a2 2 0 00-2-2H9a2 2 0 00-2 2v2H4a1 1 0 00-1 1v11a1 1 0 001 1h16a1 1 0 001-1V8a1 1 0 00-1-1z" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="text-[10px] font-semibold text-indigo-brand opacity-0 group-hover:opacity-100 transition">SELECT</span>
+            </div>
+            <h3 class="font-display text-xl font-semibold mt-4">Professional / Job</h3>
+            <p class="text-sm text-ink/60 mt-1">Switching companies, aiming for a senior role, or targeting a specific employer.</p>
+          </button>
+        </div>
+        <div class="mt-8 flex justify-end">
+          <button id="wiz1Next" disabled class="inline-flex items-center gap-2 bg-ink/10 text-ink/40 px-5 py-3 rounded-xl font-semibold cursor-not-allowed" >
+            Continue
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m0 0l-5-5m5 5l-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="wiz-step hidden mt-10" data-step="2">
+        <h2 class="font-display text-2xl font-semibold">Target role & company</h2>
+        <p class="text-ink/60 mt-1 text-sm">Tell us where you're aiming. You can add a company for tailored suggestions.</p>
+
+        <label class="block mt-6 text-sm font-medium text-ink/80">Role you're applying for</label>
+        <input id="roleInput" type="text" placeholder="e.g. Frontend Developer, Data Analyst, SDE Intern" class="mt-2 w-full px-4 py-3 rounded-xl border border-ink/10 bg-white focus:border-indigo-brand focus:ring-2 focus:ring-indigo-brand/20 outline-none transition" />
+
+        <label class="block mt-5 text-sm font-medium text-ink/80">Target company <span class="text-ink/40 font-normal">(optional)</span></label>
+        <div class="mt-3 flex flex-wrap gap-2" id="companyChips">
+          <button class="chip px-3.5 py-2 rounded-full border border-ink/10 bg-white text-sm font-medium hover:border-indigo-brand" data-company="Google">Google</button>
+          <button class="chip px-3.5 py-2 rounded-full border border-ink/10 bg-white text-sm font-medium hover:border-indigo-brand" data-company="Microsoft">Microsoft</button>
+          <button class="chip px-3.5 py-2 rounded-full border border-ink/10 bg-white text-sm font-medium hover:border-indigo-brand" data-company="Amazon">Amazon</button>
+          <button class="chip px-3.5 py-2 rounded-full border border-ink/10 bg-white text-sm font-medium hover:border-indigo-brand" data-company="TCS">TCS</button>
+          <button class="chip px-3.5 py-2 rounded-full border border-ink/10 bg-white text-sm font-medium hover:border-indigo-brand" data-company="Infosys">Infosys</button>
+          <button class="chip px-3.5 py-2 rounded-full border border-ink/10 bg-white text-sm font-medium hover:border-indigo-brand" data-company="Accenture">Accenture</button>
+          <button class="chip px-3.5 py-2 rounded-full border border-ink/10 bg-white text-sm font-medium hover:border-indigo-brand" data-company="Deloitte">Deloitte</button>
+          <button id="companyCustomBtn" class="chip px-3.5 py-2 rounded-full border border-dashed border-ink/15 bg-white text-sm font-medium hover:border-indigo-brand text-ink/60">+ Custom</button>
+        </div>
+        <input id="companyCustomInput" type="text" placeholder="Type a company name" class="hidden mt-3 w-full px-4 py-3 rounded-xl border border-ink/10 bg-white focus:border-indigo-brand outline-none" />
+        <div id="companySelected" class="mt-3 text-sm text-indigo-brand font-medium"></div>
+
+        <div class="mt-8 flex justify-between">
+          <button class="wiz-back inline-flex items-center gap-2 text-ink/60 hover:text-ink px-4 py-3 font-medium" data-back="2">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m0 0l5-5m-5 5l5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Back
+          </button>
+          <button id="wiz2Next" disabled class="inline-flex items-center gap-2 bg-ink/10 text-ink/40 px-5 py-3 rounded-xl font-semibold cursor-not-allowed">
+            Continue
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m0 0l-5-5m5 5l-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="wiz-step hidden mt-10" data-step="3">
+        <h2 class="font-display text-2xl font-semibold">Job description <span class="text-ink/40 text-lg font-normal">(optional but recommended)</span></h2>
+        <p class="text-ink/60 mt-1 text-sm">Paste the JD for a precise match score and skill-gap analysis.</p>
+
+        <label class="block mt-6 text-sm font-medium text-ink/80">Job title</label>
+        <input id="jobTitle" type="text" placeholder="e.g. Software Engineer I" class="mt-2 w-full px-4 py-3 rounded-xl border border-ink/10 bg-white focus:border-indigo-brand outline-none" />
+
+        <label class="block mt-5 text-sm font-medium text-ink/80">Paste job description</label>
+        <textarea id="jobDesc" rows="6" placeholder="Paste the full job description here — we extract required skills, keywords, and responsibilities..." class="mt-2 w-full px-4 py-3 rounded-xl border border-ink/10 bg-white focus:border-indigo-brand outline-none resize-y text-sm leading-relaxed"></textarea>
+        <div id="jdHint" class="mt-2 text-xs text-ink/50">No JD? You can skip this — we'll score against a generalist bar for the role.</div>
+
+        <div class="mt-8 flex justify-between">
+          <button class="wiz-back inline-flex items-center gap-2 text-ink/60 hover:text-ink px-4 py-3 font-medium" data-back="3">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m0 0l5-5m-5 5l5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Back
+          </button>
+          <button id="wiz3Next" class="inline-flex items-center gap-2 bg-ink text-cream px-5 py-3 rounded-xl font-semibold hover:bg-ink/90 transition">
+            Continue
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m0 0l-5-5m5 5l-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="wiz-step hidden mt-10" data-step="4">
+        <h2 class="font-display text-2xl font-semibold">Upload your resume</h2>
+        <p class="text-ink/60 mt-1 text-sm">PDF or DOCX, up to 5 MB. We parse it locally in your browser for this demo.</p>
+
+        <div id="dropZone" class="mt-6 border-2 border-dashed border-ink/15 rounded-2xl p-10 text-center cursor-pointer hover:border-indigo-brand hover:bg-indigo-soft/40 transition">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-soft text-indigo-brand flex items-center justify-center">
+            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="mt-4 font-display text-lg font-semibold">Drag your resume here, or click to browse</div>
+          <div class="mt-1 text-sm text-ink/50">PDF or DOCX · max 5 MB</div>
+          <input id="fileInput" type="file" accept=".pdf,.docx,.doc" class="hidden" />
+        </div>
+
+        <!-- selected file -->
+        <div id="filePreview" class="hidden mt-4 flex items-center gap-3 p-4 rounded-xl bg-white border border-ink/10">
+          <div class="w-10 h-10 rounded-lg bg-rose-soft text-rose-brand flex items-center justify-center font-mono text-xs font-bold">PDF</div>
+          <div class="flex-1 min-w-0">
+            <div id="fileName" class="font-medium text-sm truncate">Aarav_Sharma_Resume.pdf</div>
+            <div id="fileSize" class="text-xs text-ink/50">182 KB</div>
+          </div>
+          <button id="fileRemove" class="text-ink/40 hover:text-rose-brand p-1.5 rounded-lg" aria-label="Remove file">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <!-- Try sample button -->
+        <div class="mt-4 text-center">
+          <button id="useSample" class="text-sm text-indigo-brand font-medium underline-grow">Or use our sample resume →</button>
+        </div>
+
+        <div class="mt-8 flex justify-between">
+          <button class="wiz-back inline-flex items-center gap-2 text-ink/60 hover:text-ink px-4 py-3 font-medium" data-back="4">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m0 0l5-5m-5 5l5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Back
+          </button>
+          <button id="wiz4Analyze" disabled class="inline-flex items-center gap-2 bg-ink/10 text-ink/40 px-6 py-3 rounded-xl font-semibold cursor-not-allowed">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Analyze my resume
+          </button>
+        </div>
+      </div>
+
+      <!-- ANALYZING OVERLAY -->
+      <div id="analyzingOverlay" class="hidden mt-10 rounded-2xl bg-white border border-ink/10 p-8 shadow-soft">
+        <div class="flex items-center gap-3 mb-1">
+          <div class="w-8 h-8 rounded-lg bg-indigo-brand flex items-center justify-center">
+            <svg class="w-5 h-5 text-white animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3a9 9 0 109 9" stroke-linecap="round"/></svg>
+          </div>
+          <h3 class="font-display text-xl font-semibold">Analyzing your resume…</h3>
+        </div>
+        <p id="analyzeStage" class="text-sm text-ink/60 mt-1">Reading document structure…</p>
+        <div class="mt-5 h-1.5 rounded-full bg-ink/8 scan-bar overflow-hidden">
+          <div id="analyzeProgress" class="h-full bg-indigo-brand transition-all duration-500" style="width:5%"></div>
+        </div>
+        <ul id="stageList" class="mt-5 space-y-2 text-sm">
+          <!-- stages fill in -->
+        </ul>
+      </div>
+
+      <!-- ERROR STATES -->
+      <div id="errorBox" class="hidden mt-6 p-4 rounded-xl bg-rose-soft border border-rose-brand/30 flex items-start gap-3">
+        <svg class="w-5 h-5 text-rose-brand shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01" stroke-linecap="round"/></svg>
+        <div>
+          <div id="errorTitle" class="font-semibold text-rose-brand text-sm">Unsupported file</div>
+          <div id="errorMsg" class="text-sm text-ink/70 mt-0.5">Please upload a PDF or DOCX file under 5 MB.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ DASHBOARD ============================ -->
+  <section id="page-dashboard" class="page">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-10 lg:py-14">
+      <!-- header -->
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase text-indigo-brand">
+            <span>Detailed report</span>
+            <span class="text-ink/30">/</span>
+            <span class="text-ink/50">Aarav Sharma · v2</span>
+          </div>
+          <h1 class="font-display text-3xl sm:text-4xl font-bold mt-2 tracking-tight">Here's what your resume says, honestly.</h1>
+          <p class="text-ink/60 mt-2 max-w-2xl">A strong start — you have real projects and core skills. The score reflects a resume that's ATS-friendly in structure but light on impact and missing a few role-specific signals.</p>
+        </div>
+        <div class="flex gap-2">
+          <button class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-ink/10 bg-white hover:bg-ink/5 text-sm font-medium transition">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Re-upload
+          </button>
+          <a href="#" data-route="report" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-brand text-white text-sm font-semibold hover:bg-indigo-deep transition">
+            Open full report
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m0 0l-5-5m5 5l-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- main grid -->
+      <div class="mt-10 grid lg:grid-cols-12 gap-6">
+        <!-- score ring + summary -->
+        <div class="lg:col-span-4">
+          <div class="bg-white rounded-2xl border border-ink/8 p-6 shadow-card sticky top-20">
+            <div class="text-xs font-semibold text-ink/50 uppercase tracking-wider">Estimated score</div>
+            <div class="relative mt-4 flex items-center justify-center">
+              <svg viewBox="0 0 200 200" class="w-56 h-56 -rotate-90">
+                <circle cx="100" cy="100" r="84" fill="none" stroke-width="14" class="ring-bg"/>
+                <circle id="scoreRing" cx="100" cy="100" r="84" fill="none" stroke-width="14" class="ring-fg" stroke-dasharray="527.79" stroke-dashoffset="527.79"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="scoreNum" class="font-display text-6xl font-bold leading-none">0</span>
+                <span class="text-sm text-ink/40 mt-1">out of 100</span>
+              </div>
+            </div>
+            <div class="mt-4 flex items-center justify-center gap-2">
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full badge-mid">Needs work</span>
+              <span class="text-xs text-ink/50">·</span>
+              <span class="text-xs text-ink/60">6 fixes to "Good"</span>
+            </div>
+            <div class="mt-6 pt-6 border-t border-ink/8 space-y-2 text-sm">
+              <div class="flex justify-between"><span class="text-ink/60">Goal</span><span class="font-medium">Professional / Job</span></div>
+              <div class="flex justify-between"><span class="text-ink/60">Role</span><span class="font-medium">Frontend Developer</span></div>
+              <div class="flex justify-between"><span class="text-ink/60">Company</span><span class="font-medium">Google</span></div>
+              <div class="flex justify-between"><span class="text-ink/60">JD provided</span><span class="font-medium text-sage">Yes</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- category cards -->
+        <div class="lg:col-span-8">
+          <div class="grid sm:grid-cols-2 gap-4" id="categoryGrid">
+            <!-- filled by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts + priority fixes -->
+      <div class="mt-10 grid lg:grid-cols-12 gap-6">
+        <!-- radar -->
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display text-lg font-semibold">Category breakdown</h3>
+            <span class="text-xs text-ink/50">vs role benchmark</span>
+          </div>
+          <div class="mt-4 h-72"><canvas id="radarChart"></canvas></div>
+        </div>
+
+        <!-- priority fixes -->
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display text-lg font-semibold">Priority fixes</h3>
+            <span class="text-xs text-ink/50">Do these first</span>
+          </div>
+          <ol class="mt-5 space-y-3" id="priorityList">
+            <!-- filled by JS -->
+          </ol>
+        </div>
+      </div>
+
+      <!-- Missing skills + links + template + readiness -->
+      <div class="mt-10 grid lg:grid-cols-2 gap-6">
+        <!-- Missing skills -->
+        <div class="bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display text-lg font-semibold">Missing skills & keywords</h3>
+            <span class="text-xs font-bold px-2 py-1 rounded-full badge-low">5 gaps</span>
+          </div>
+          <p class="text-sm text-ink/60 mt-1">From the job description you pasted. Ranked by importance.</p>
+          <div class="mt-4 space-y-2.5">
+            <div class="flex items-center justify-between p-3 rounded-xl bg-rose-soft/60">
+              <div>
+                <div class="font-medium text-sm">Docker</div>
+                <div class="text-xs text-ink/60">Mentioned 4× in JD · expected for this level</div>
+              </div>
+              <span class="text-xs font-bold text-rose-brand">High</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-xl bg-rose-soft/60">
+              <div>
+                <div class="font-medium text-sm">AWS (EC2, S3)</div>
+                <div class="text-xs text-ink/60">Mentioned 3× in JD</div>
+              </div>
+              <span class="text-xs font-bold text-rose-brand">High</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-xl bg-amber-soft/60">
+              <div>
+                <div class="font-medium text-sm">TypeScript</div>
+                <div class="text-xs text-ink/60">Implied by stack — adds it to your skills list</div>
+              </div>
+              <span class="text-xs font-bold text-amber-brand">Medium</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-xl bg-amber-soft/60">
+              <div>
+                <div class="font-medium text-sm">CI/CD pipelines</div>
+                <div class="text-xs text-ink/60">Mentioned in responsibilities</div>
+              </div>
+              <span class="text-xs font-bold text-amber-brand">Medium</span>
+            </div>
+            <div class="flex items-center justify-between p-3 rounded-xl bg-sand/60">
+              <div>
+                <div class="font-medium text-sm">Performance optimization</div>
+                <div class="text-xs text-ink/60">Keyword match — add as a demonstrated skill</div>
+              </div>
+              <span class="text-xs font-bold text-ink/60">Low</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Links -->
+        <div class="bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+          <h3 class="font-display text-lg font-semibold">Links & contact completeness</h3>
+          <p class="text-sm text-ink/60 mt-1">Recruiters click these. Make sure they exist and work.</p>
+          <div class="mt-4 space-y-2.5">
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-sage/10">
+              <span class="w-9 h-9 rounded-lg bg-sage/15 text-sage flex items-center justify-center"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.2 8h4.6v14H.2zM7.6 8h4.4v1.9h.06c.6-1.1 2.1-2.3 4.34-2.3 4.64 0 5.5 3.05 5.5 7.02V22h-4.6v-6.2c0-1.48-.03-3.4-2.07-3.4-2.07 0-2.38 1.62-2.38 3.3V22H7.6z"/></svg></span>
+              <div class="flex-1"><div class="font-medium text-sm">LinkedIn</div><div class="text-xs text-ink/60 font-mono">linkedin.com/in/aarav-sharma</div></div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full badge-good">Good</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-rose-soft/60">
+              <span class="w-9 h-9 rounded-lg bg-rose-brand/15 text-rose-brand flex items-center justify-center"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.4.6.1.82-.26.82-.58v-2c-3.34.73-4.04-1.6-4.04-1.6-.55-1.4-1.34-1.78-1.34-1.78-1.1-.74.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.84 2.8 1.3 3.5 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.34-5.47-5.96 0-1.32.47-2.4 1.24-3.24-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 016 0c2.3-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.23 1.92 1.23 3.24 0 4.63-2.8 5.65-5.48 5.95.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.58A12 12 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></span>
+              <div class="flex-1"><div class="font-medium text-sm">GitHub</div><div class="text-xs text-rose-brand">Not found in your resume</div></div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full badge-low">Missing</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-amber-soft/60">
+              <span class="w-9 h-9 rounded-lg bg-amber-brand/15 text-amber-brand flex items-center justify-center"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" stroke-linecap="round"/></svg></span>
+              <div class="flex-1"><div class="font-medium text-sm">Portfolio</div><div class="text-xs text-ink/60">Optional but recommended for frontend roles</div></div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full badge-mid">Suggested</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-sage/10">
+              <span class="w-9 h-9 rounded-lg bg-sage/15 text-sage flex items-center justify-center"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <div class="flex-1"><div class="font-medium text-sm">Email</div><div class="text-xs text-ink/60 font-mono">aarav.sharma@gmail.com</div></div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full badge-good">Good</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-amber-soft/60">
+              <span class="w-9 h-9 rounded-lg bg-amber-brand/15 text-amber-brand flex items-center justify-center"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L20 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" stroke-linejoin="round"/></svg></span>
+              <div class="flex-1"><div class="font-medium text-sm">Phone</div><div class="text-xs text-ink/60 font-mono">+91 98••••• •12</div></div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full badge-mid">Partially visible</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Template review -->
+        <div class="bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+          <h3 class="font-display text-lg font-semibold">Template review</h3>
+          <p class="text-sm text-ink/60 mt-1">Is your layout helping or hurting the parse?</p>
+          <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div class="p-3 rounded-xl bg-rose-soft/60">
+              <div class="text-xs font-semibold text-rose-brand uppercase tracking-wider">ATS-friendly</div>
+              <div class="font-display text-2xl font-bold mt-1">64</div>
+              <div class="text-xs text-ink/60">Two-column layout risks parser confusion</div>
+            </div>
+            <div class="p-3 rounded-xl bg-sage/10">
+              <div class="text-xs font-semibold text-sage uppercase tracking-wider">Professional</div>
+              <div class="font-display text-2xl font-bold mt-1">88</div>
+              <div class="text-xs text-ink/60">Clean type, consistent spacing</div>
+            </div>
+            <div class="p-3 rounded-xl bg-amber-soft/60">
+              <div class="text-xs font-semibold text-amber-brand uppercase tracking-wider">Density</div>
+              <div class="font-display text-2xl font-bold mt-1">72</div>
+              <div class="text-xs text-ink/60">Slightly sparse — add 1–2 impact bullets</div>
+            </div>
+            <div class="p-3 rounded-xl bg-sage/10">
+              <div class="text-xs font-semibold text-sage uppercase tracking-wider">Layout</div>
+              <div class="font-display text-2xl font-bold mt-1">85</div>
+              <div class="text-xs text-ink/60">Logical section order</div>
+            </div>
+          </div>
+          <div class="mt-4 p-3 rounded-xl bg-indigo-soft/60 text-sm">
+            <span class="font-semibold text-indigo-brand">Recommendation:</span> Switch to a single-column template and move skills above experience. Use the same font throughout.
+          </div>
+        </div>
+
+        <!-- Interview readiness -->
+        <div class="bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display text-lg font-semibold">Interview readiness</h3>
+            <a href="#" data-route="interview" class="text-xs font-semibold text-indigo-brand underline-grow">Open prep →</a>
+          </div>
+          <p class="text-sm text-ink/60 mt-1">Based on your resume, here's what an interviewer might ask first.</p>
+          <div class="mt-4 space-y-2.5">
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-sand/50">
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-brand text-white">Technical</span>
+              <span class="text-sm flex-1">Walk me through how you'd optimize your React app's load time.</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-sand/50">
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-brand text-white">Project</span>
+              <span class="text-sm flex-1">Tell me about "ShopFlow" — what was your hardest decision?</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-sand/50">
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-brand text-white">HR</span>
+              <span class="text-sm flex-1">Why Google, and why this role specifically?</span>
+            </div>
+          </div>
+          <div class="mt-4 text-xs text-ink/50 italic">Practice questions, not predictions. Always pair with company research.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ DETAILED REPORT ============================ -->
+  <section id="page-report" class="page">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-10 lg:py-14">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase text-indigo-brand">
+            <a href="#" data-route="dashboard" class="hover:underline">Dashboard</a>
+            <span class="text-ink/30">/</span>
+            <span class="text-ink/50">Detailed report</span>
+          </div>
+          <h1 class="font-display text-3xl sm:text-4xl font-bold mt-2 tracking-tight">Section-by-section report.</h1>
+          <p class="text-ink/60 mt-2 max-w-2xl">Every section is marked Good, Needs improvement, Missing, or Not relevant — with an explanation and the exact next move.</p>
+        </div>
+        <a href="#" data-route="interview" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-ink text-cream text-sm font-semibold hover:bg-ink/90 transition">
+          Practice interview
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m0 0l-5-5m5 5l-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+
+      <!-- tabs -->
+      <div class="mt-8 border-b border-ink/10 overflow-x-auto">
+        <div class="flex gap-1 min-w-max" id="reportTabs">
+          <button class="report-tab tab-active px-4 py-3 text-sm font-semibold border-b-2 border-transparent transition" data-tab="contact">Contact</button>
+          <button class="report-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink/60 hover:text-ink transition" data-tab="summary">Summary</button>
+          <button class="report-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink/60 hover:text-ink transition" data-tab="education">Education</button>
+          <button class="report-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink/60 hover:text-ink transition" data-tab="experience">Experience</button>
+          <button class="report-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink/60 hover:text-ink transition" data-tab="projects">Projects</button>
+          <button class="report-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink/60 hover:text-ink transition" data-tab="skills">Skills</button>
+          <button class="report-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink/60 hover:text-ink transition" data-tab="certifications">Certifications</button>
+          <button class="report-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink/60 hover:text-ink transition" data-tab="links">Links</button>
+          <button class="report-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink/60 hover:text-ink transition" data-tab="ats">ATS analysis</button>
+          <button class="report-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink/60 hover:text-ink transition" data-tab="jobmatch">Job match</button>
+        </div>
+      </div>
+
+      <div id="reportContent" class="mt-8">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ INTERVIEW PREP ============================ -->
+  <section id="page-interview" class="page">
+    <div class="max-w-4xl mx-auto px-5 sm:px-8 py-10 lg:py-14">
+      <div class="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase text-indigo-brand">
+        <a href="#" data-route="dashboard" class="hover:underline">Dashboard</a>
+        <span class="text-ink/30">/</span>
+        <span class="text-ink/50">Interview prep</span>
+      </div>
+      <h1 class="font-display text-3xl sm:text-4xl font-bold mt-2 tracking-tight">Practice questions from your resume.</h1>
+      <p class="text-ink/60 mt-3 max-w-2xl">These are <strong class="text-ink">practice questions, not predictions</strong>. They're pulled from what's actually written on your resume — so anything you can't answer is something to fix before the real call.</p>
+
+      <div class="mt-6 flex items-center gap-2 p-3 rounded-xl bg-amber-soft/60 border border-amber-brand/20 text-sm">
+        <svg class="w-5 h-5 text-amber-brand shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.86L1.82 18a2 2 0 001.7 3h16.96a2 2 0 001.7-3L13.7 3.86a2 2 0 00-3.4 0z" stroke-linejoin="round"/></svg>
+        <span>Always pair practice with company-specific research. Real interviews blend resume, behavioral, and role context.</span>
+      </div>
+
+      <!-- category filter -->
+      <div class="mt-8 flex flex-wrap gap-2" id="prepFilters">
+        <button class="prep-filter px-3.5 py-2 rounded-full bg-indigo-brand text-white text-sm font-semibold" data-filter="all">All</button>
+        <button class="prep-filter px-3.5 py-2 rounded-full bg-white border border-ink/10 text-sm font-medium hover:border-indigo-brand" data-filter="technical">Technical</button>
+        <button class="prep-filter px-3.5 py-2 rounded-full bg-white border border-ink/10 text-sm font-medium hover:border-indigo-brand" data-filter="hr">HR</button>
+        <button class="prep-filter px-3.5 py-2 rounded-full bg-white border border-ink/10 text-sm font-medium hover:border-indigo-brand" data-filter="project">Project</button>
+        <button class="prep-filter px-3.5 py-2 rounded-full bg-white border border-ink/10 text-sm font-medium hover:border-indigo-brand" data-filter="skill">Skill</button>
+        <button class="prep-filter px-3.5 py-2 rounded-full bg-white border border-ink/10 text-sm font-medium hover:border-indigo-brand" data-filter="role">Role</button>
+      </div>
+
+      <div id="prepList" class="mt-6 space-y-3">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ HISTORY / COMPARE ============================ -->
+  <section id="page-history" class="page">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-10 lg:py-14">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <span class="text-xs font-semibold tracking-wider uppercase text-indigo-brand">Version history</span>
+          <h1 class="font-display text-3xl sm:text-4xl font-bold mt-2 tracking-tight">Before vs after. See what changed.</h1>
+          <p class="text-ink/60 mt-2 max-w-2xl">Every re-upload is saved here. Compare two versions side-by-side to see what improved — and what still needs work.</p>
+        </div>
+        <a href="#" data-route="analyze" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-brand text-white text-sm font-semibold hover:bg-indigo-deep transition">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Upload new version
+        </a>
+      </div>
+
+      <!-- timeline -->
+      <div class="mt-10 bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+        <h3 class="font-display text-lg font-semibold">Your versions</h3>
+        <div class="mt-5 space-y-4">
+          <!-- v3 -->
+          <div class="flex items-center gap-4 p-4 rounded-xl bg-indigo-soft/40 border border-indigo-brand/20">
+            <div class="w-10 h-10 rounded-xl bg-indigo-brand text-white flex items-center justify-center font-display font-bold">v3</div>
+            <div class="flex-1">
+              <div class="font-semibold">Current draft — improved</div>
+              <div class="text-xs text-ink/60 mt-0.5">Uploaded 2 hours ago · Frontend Developer · Google</div>
+            </div>
+            <div class="text-right">
+              <div class="font-display text-2xl font-bold s-good">84</div>
+              <div class="text-xs text-ink/50">+12 from v2</div>
+            </div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full badge-good">Latest</span>
+          </div>
+          <!-- v2 -->
+          <div class="flex items-center gap-4 p-4 rounded-xl bg-white border border-ink/10">
+            <div class="w-10 h-10 rounded-xl bg-amber-soft text-amber-brand flex items-center justify-center font-display font-bold">v2</div>
+            <div class="flex-1">
+              <div class="font-semibold">After first fixes</div>
+              <div class="text-xs text-ink/60 mt-0.5">Uploaded 3 days ago · Frontend Developer · Google</div>
+            </div>
+            <div class="text-right">
+              <div class="font-display text-2xl font-bold s-mid">72</div>
+              <div class="text-xs text-ink/50">+18 from v1</div>
+            </div>
+            <button class="text-xs font-semibold text-indigo-brand underline-grow">Compare →</button>
+          </div>
+          <!-- v1 -->
+          <div class="flex items-center gap-4 p-4 rounded-xl bg-white border border-ink/10">
+            <div class="w-10 h-10 rounded-xl bg-rose-soft text-rose-brand flex items-center justify-center font-display font-bold">v1</div>
+            <div class="flex-1">
+              <div class="font-semibold">First upload</div>
+              <div class="text-xs text-ink/60 mt-0.5">Uploaded 1 week ago · Frontend Developer · Google</div>
+            </div>
+            <div class="text-right">
+              <div class="font-display text-2xl font-bold s-low">54</div>
+              <div class="text-xs text-ink/50">baseline</div>
+            </div>
+            <button class="text-xs font-semibold text-indigo-brand underline-grow">Compare →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- compare view -->
+      <div class="mt-8 grid lg:grid-cols-2 gap-6">
+        <!-- v2 -->
+        <div class="bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-lg bg-amber-soft text-amber-brand flex items-center justify-center font-display font-bold text-sm">v2</span>
+              <span class="font-display text-lg font-semibold">Before</span>
+            </div>
+            <span class="font-display text-3xl font-bold s-mid">72</span>
+          </div>
+          <div class="space-y-2.5 text-sm">
+            <div class="flex items-center justify-between"><span class="text-ink/60">Overall</span><span class="font-semibold">72</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">ATS</span><span class="font-semibold">64</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Skills</span><span class="font-semibold">81</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Experience</span><span class="font-semibold">58</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Projects</span><span class="font-semibold">70</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Job match</span><span class="font-semibold">68</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Formatting</span><span class="font-semibold">75</span></div>
+          </div>
+          <div class="mt-4 pt-4 border-t border-ink/8">
+            <div class="text-xs font-semibold text-ink/50 uppercase tracking-wider mb-2">Issues at this version</div>
+            <ul class="space-y-1.5 text-xs text-ink/70">
+              <li class="flex gap-2"><span class="text-rose-brand">●</span> Two-column layout — ATS parse risk</li>
+              <li class="flex gap-2"><span class="text-rose-brand">●</span> No GitHub link</li>
+              <li class="flex gap-2"><span class="text-rose-brand">●</span> Project bullets had no numbers</li>
+              <li class="flex gap-2"><span class="text-rose-brand">●</span> Missing Docker, AWS keywords</li>
+            </ul>
+          </div>
+        </div>
+        <!-- v3 -->
+        <div class="bg-white rounded-2xl border-2 border-sage/40 p-6 shadow-ring">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-lg bg-indigo-brand text-white flex items-center justify-center font-display font-bold text-sm">v3</span>
+              <span class="font-display text-lg font-semibold">After</span>
+            </div>
+            <div class="flex items-end gap-2">
+              <span class="font-display text-3xl font-bold s-good">84</span>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full badge-good mb-1">+12</span>
+            </div>
+          </div>
+          <div class="space-y-2.5 text-sm">
+            <div class="flex items-center justify-between"><span class="text-ink/60">Overall</span><span class="font-semibold">84</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">ATS</span><span class="font-semibold s-good">88 (+24)</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Skills</span><span class="font-semibold s-good">86 (+5)</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Experience</span><span class="font-semibold s-good">74 (+16)</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Projects</span><span class="font-semibold s-good">82 (+12)</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Job match</span><span class="font-semibold s-good">80 (+12)</span></div>
+            <div class="flex items-center justify-between"><span class="text-ink/60">Formatting</span><span class="font-semibold">80 (+5)</span></div>
+          </div>
+          <div class="mt-4 pt-4 border-t border-ink/8">
+            <div class="text-xs font-semibold text-sage uppercase tracking-wider mb-2">What improved</div>
+            <ul class="space-y-1.5 text-xs text-ink/70">
+              <li class="flex gap-2"><span class="text-sage">●</span> Switched to single-column — ATS now parses cleanly</li>
+              <li class="flex gap-2"><span class="text-sage">●</span> Added GitHub link in header</li>
+              <li class="flex gap-2"><span class="text-sage">●</span> Added impact metrics to 3 project bullets</li>
+              <li class="flex gap-2"><span class="text-sage">●</span> Added Docker, AWS, TypeScript to skills</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-4 border-t border-ink/8">
+            <div class="text-xs font-semibold text-amber-brand uppercase tracking-wider mb-2">Still to fix</div>
+            <ul class="space-y-1.5 text-xs text-ink/70">
+              <li class="flex gap-2"><span class="text-amber-brand">●</span> Add a 4th project for seniority signal</li>
+              <li class="flex gap-2"><span class="text-amber-brand">●</span> Quantify internship experience</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- improvement roadmap -->
+      <div class="mt-8 bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+        <h3 class="font-display text-lg font-semibold">Improvement roadmap</h3>
+        <p class="text-sm text-ink/60 mt-1">A suggested order of fixes between v2 and v3, and beyond.</p>
+        <div class="mt-5 space-y-3">
+          <div class="flex items-start gap-4">
+            <div class="step-line w-1 self-stretch rounded-full" style="--p:100%"></div>
+            <div class="flex-1 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-sage">DONE</span>
+                <span class="font-semibold text-sm">Switch to single-column layout</span>
+              </div>
+              <p class="text-xs text-ink/60 mt-1">Resolved ATS parsing risk. Score: 64 → 88.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="step-line w-1 self-stretch rounded-full" style="--p:100%"></div>
+            <div class="flex-1 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-sage">DONE</span>
+                <span class="font-semibold text-sm">Add GitHub link in header</span>
+              </div>
+              <p class="text-xs text-ink/60 mt-1">Recruiters can now verify your code. Links score: 60 → 90.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="step-line w-1 self-stretch rounded-full" style="--p:100%"></div>
+            <div class="flex-1 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-sage">DONE</span>
+                <span class="font-semibold text-sm">Quantify project impact</span>
+              </div>
+              <p class="text-xs text-ink/60 mt-1">Added "32% faster", "1.2k DAU" — Projects: 70 → 82.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="step-line w-1 self-stretch rounded-full" style="--p:50%"></div>
+            <div class="flex-1 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-amber-brand">IN PROGRESS</span>
+                <span class="font-semibold text-sm">Add a 4th project for seniority signal</span>
+              </div>
+              <p class="text-xs text-ink/60 mt-1">A production project or open-source contribution would push experience above 85.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="step-line w-1 self-stretch rounded-full" style="--p:0%"></div>
+            <div class="flex-1 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-ink/50">TODO</span>
+                <span class="font-semibold text-sm">Quantify internship experience</span>
+              </div>
+              <p class="text-xs text-ink/60 mt-1">Add 1–2 measurable outcomes from your TCS internship.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- skill gap roadmap -->
+      <div class="mt-8 bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+        <h3 class="font-display text-lg font-semibold">Skill gap roadmap</h3>
+        <p class="text-sm text-ink/60 mt-1">Missing skills from the JD, with a suggested learning order.</p>
+        <div class="mt-5 grid sm:grid-cols-2 gap-3">
+          <div class="p-4 rounded-xl bg-rose-soft/60">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-sm">Docker</span>
+              <span class="text-xs font-bold text-rose-brand">High priority</span>
+            </div>
+            <p class="text-xs text-ink/60 mt-1">Start with the official "Get Started" workshop (~6h). Add a Dockerfile to one of your existing projects.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-rose-soft/60">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-sm">AWS (EC2, S3)</span>
+              <span class="text-xs font-bold text-rose-brand">High priority</span>
+            </div>
+            <p class="text-xs text-ink/60 mt-1">Deploy one project to EC2 + serve assets from S3. Document it on your resume.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-amber-soft/60">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-sm">TypeScript</span>
+              <span class="text-xs font-bold text-amber-brand">Medium</span>
+            </div>
+            <p class="text-xs text-ink/60 mt-1">Convert one React project to TS. List "TypeScript" under skills honestly.</p>
+          </div>
+          <div class="p-4 rounded-xl bg-amber-soft/60">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-sm">CI/CD pipelines</span>
+              <span class="text-xs font-bold text-amber-brand">Medium</span>
+            </div>
+            <p class="text-xs text-ink/60 mt-1">Add a GitHub Action to one repo — auto-deploy on merge to main.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ HELP / FAQ ============================ -->
+  <section id="page-help" class="page">
+    <div class="max-w-4xl mx-auto px-5 sm:px-8 py-10 lg:py-16">
+      <div class="text-center">
+        <span class="text-xs font-semibold tracking-wider uppercase text-indigo-brand">Help & FAQ</span>
+        <h1 class="font-display text-4xl sm:text-5xl font-bold mt-3 tracking-tight">Everything you might wonder.</h1>
+        <p class="text-ink/60 mt-4 max-w-xl mx-auto">Quick answers about how ResumeLift works, what the scores mean, and what to do next.</p>
+      </div>
+
+      <!-- search -->
+      <div class="mt-10 relative">
+        <svg class="w-5 h-5 text-ink/40 absolute left-4 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg>
+        <input id="faqSearch" type="text" placeholder="Search questions…" class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-ink/10 bg-white focus:border-indigo-brand focus:ring-2 focus:ring-indigo-brand/20 outline-none transition" />
+      </div>
+
+      <div id="faq-main" class="mt-6 space-y-3">
+        <!-- filled by JS -->
+      </div>
+
+      <!-- contact -->
+      <div class="mt-12 p-6 rounded-2xl bg-sand/50 border border-ink/8 text-center">
+        <h3 class="font-display text-xl font-semibold">Still stuck?</h3>
+        <p class="text-sm text-ink/60 mt-2">Email us — a real person responds, usually within a day.</p>
+        <a href="mailto:hello@resumelift.app" class="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-ink text-cream text-sm font-semibold hover:bg-ink/90 transition">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          hello@resumelift.app
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ PRIVACY ============================ -->
+  <section id="page-privacy" class="page">
+    <div class="max-w-3xl mx-auto px-5 sm:px-8 py-10 lg:py-16">
+      <span class="text-xs font-semibold tracking-wider uppercase text-indigo-brand">Privacy</span>
+      <h1 class="font-display text-4xl sm:text-5xl font-bold mt-3 tracking-tight">Your resume is yours.</h1>
+      <p class="text-ink/60 mt-4 leading-relaxed">We wrote this in plain English, not legalese. If anything here is unclear, email us and we'll fix it.</p>
+
+      <div class="mt-10 space-y-8">
+        <div>
+          <h2 class="font-display text-2xl font-semibold">What we process</h2>
+          <p class="text-ink/70 mt-2 leading-relaxed">When you upload a resume, we read its text and structure to compute a score and category breakdown. If you paste a job description, we read that too. The analysis happens in your session.</p>
+        </div>
+        <div>
+          <h2 class="font-display text-2xl font-semibold">What we store</h2>
+          <p class="text-ink/70 mt-2 leading-relaxed">We do not store the original file by default. If you choose to save a version to your history, we store a snapshot of the parsed content and the analysis — not the original PDF/DOCX. Account data (email) is stored only if you create an account.</p>
+        </div>
+        <div>
+          <h2 class="font-display text-2xl font-semibold">Deletion</h2>
+          <p class="text-ink/70 mt-2 leading-relaxed">You can delete any saved version from the History page in one click. Deletion is permanent and cannot be undone. Deleting your account removes all associated versions and analyses.</p>
+        </div>
+        <div>
+          <h2 class="font-display text-2xl font-semibold">Retention</h2>
+          <p class="text-ink/70 mt-2 leading-relaxed">Unsaved analyses are discarded at the end of your session. Saved versions are kept until you delete them. We do not retain inactive accounts beyond 24 months — you'll get an email reminder before any cleanup.</p>
+        </div>
+        <div>
+          <h2 class="font-display text-2xl font-semibold">What we don't do</h2>
+          <ul class="mt-2 space-y-2 text-ink/70">
+            <li class="flex gap-2"><span class="text-rose-brand mt-1">✕</span> We do not sell or share your resume content with third parties.</li>
+            <li class="flex gap-2"><span class="text-rose-brand mt-1">✕</span> We do not use your resume to train AI models.</li>
+            <li class="flex gap-2"><span class="text-rose-brand mt-1">✕</span> We do not auto-apply to jobs on your behalf.</li>
+            <li class="flex gap-2"><span class="text-rose-brand mt-1">✕</span> We do not make unverifiable security claims. We follow standard practices and will publish a security overview when our audit completes.</li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="font-display text-2xl font-semibold">Honest disclaimer</h2>
+          <p class="text-ink/70 mt-2 leading-relaxed">ResumeLift gives you a heuristic estimate based on common recruiter and ATS behavior. A higher score does not guarantee an interview or a job — it means your resume is more likely to be parsed and read. Use it as a second opinion, not a verdict.</p>
+        </div>
+      </div>
+
+      <div class="mt-12 p-5 rounded-2xl bg-indigo-soft/60 border border-indigo-brand/20 flex items-start gap-3">
+        <svg class="w-5 h-5 text-indigo-brand shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-12V5l-8-3-8 3v5c0 8 8 12 8 12z" stroke-linejoin="round"/></svg>
+        <div class="text-sm text-ink/70">Last updated: this month. Questions? <a href="mailto:privacy@resumelift.app" class="text-indigo-brand font-medium underline-grow">privacy@resumelift.app</a></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="bg-ink text-cream/70 mt-20">
+  <div class="max-w-7xl mx-auto px-5 sm:px-8 py-14">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-10">
+      <div class="lg:col-span-2">
+        <a href="#" data-route="landing" class="flex items-center gap-2.5">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-cream/10 text-cream">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><path d="M18 18l3 3" stroke="#E8A33D" stroke-width="2.4"/></svg>
+          </span>
+          <span class="font-display text-xl font-bold tracking-tight text-cream">Resume<span class="text-indigo-brand">Lift</span></span>
+        </a>
+        <p class="text-sm mt-4 max-w-xs leading-relaxed">A second opinion on your resume — for students, freshers, and first-time job seekers. Built to tell you the next thing to fix.</p>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-cream uppercase tracking-wider">Product</div>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li><a href="#" data-route="analyze" class="hover:text-cream transition">Analyze</a></li>
+          <li><a href="#" data-route="dashboard" class="hover:text-cream transition">Dashboard</a></li>
+          <li><a href="#" data-route="interview" class="hover:text-cream transition">Interview prep</a></li>
+          <li><a href="#" data-route="history" class="hover:text-cream transition">History</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-cream uppercase tracking-wider">Resources</div>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li><a href="#" data-route="help" class="hover:text-cream transition">Help & FAQ</a></li>
+          <li><a href="#" data-route="privacy" class="hover:text-cream transition">Privacy</a></li>
+          <li><a href="#" class="hover:text-cream transition">Resume guide</a></li>
+          <li><a href="#" class="hover:text-cream transition">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-semibold text-cream uppercase tracking-wider">Company</div>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li><a href="#" class="hover:text-cream transition">About</a></li>
+          <li><a href="mailto:hello@resumelift.app" class="hover:text-cream transition">Contact</a></li>
+          <li><a href="#" class="hover:text-cream transition">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-12 pt-6 border-t border-cream/10 flex flex-wrap justify-between gap-3 text-xs text-cream/50">
+      <div>© 2025 ResumeLift. Scores are estimates, not guarantees.</div>
+      <div class="flex gap-4">
+        <span>Made for first-time job seekers.</span>
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-sage pulse-dot"></span>All systems normal</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* =================== ROUTING =================== */
+const pages = document.querySelectorAll('.page');
+const navLinks = document.querySelectorAll('[data-route]');
+function routeTo(name, push=true){
+  pages.forEach(p=>p.classList.remove('active'));
+  const target = document.getElementById('page-'+name);
+  if(target){ target.classList.add('active'); }
+  document.getElementById('mobileMenu').classList.add('hidden');
+  window.scrollTo({top:0,behavior:'instant'});
+  if(push) history.replaceState({route:name},'', '#'+name);
+  // init heavy charts lazily
+  if(name==='dashboard') initDashboard();
+  if(name==='report') initReport('contact');
+  if(name==='interview') renderPrep('all');
+  if(name==='help') renderFAQ('faq-main', faqData, '');
+  if(name==='landing') renderFAQ('faq-landing', faqData.slice(0,6), '');
+}
+navLinks.forEach(l=>l.addEventListener('click',e=>{
+  e.preventDefault();
+  routeTo(l.dataset.route);
+}));
+document.getElementById('menuBtn').addEventListener('click',()=>{
+  document.getElementById('mobileMenu').classList.toggle('hidden');
+});
+
+/* =================== FAQ DATA =================== */
+const faqData = [
+  {q:"Is ResumeLift free for students?", a:"Yes. Core analysis is free for students and first-time job seekers. We don't gate skills or fixes behind a paywall — what you see in the sample is what you get."},
+  {q:"Does a higher score guarantee an interview?", a:"No, and we'd be lying if we said otherwise. The score estimates how likely your resume is to be parsed and read. It's a second opinion, not a verdict. Pair it with company research and a tailored cover note."},
+  {q:"What file formats can I upload?", a:"PDF and DOCX, up to 5 MB. We recommend PDF for the most consistent ATS parsing — some DOCX files render differently across systems."},
+  {q:"Will my resume be stored?", a:"Only if you save it to your history. Otherwise the analysis happens in your session and the file is discarded. You can delete any saved version in one click."},
+  {q:"What does 'ATS-friendly' mean?", a:"It means your resume can be reliably parsed by Applicant Tracking Systems — the software most companies use to filter resumes before a human ever sees them. Multi-column layouts, images, and unusual fonts often break parsing."},
+  {q:"How is the job match score calculated?", a:"If you paste a job description, we extract required skills, keywords, and responsibilities, then compare against your resume. The score reflects overlap weighted by how often each signal appears in the JD."},
+  {q:"Are the interview questions real predictions?", a:"No. They're practice questions generated from what's actually on your resume — so anything you can't answer well is something to fix or study before the real call."},
+  {q:"Can I compare two versions of my resume?", a:"Yes. Every re-upload is saved to History. Open two versions side-by-side to see what improved, what stayed the same, and what still needs work."},
+  {q:"I got an error. What do I do?", a:"Most errors are file-related: unsupported format, file too large, or a duplicate upload. The error message tells you exactly what happened and what to do next. If it persists, email us with the file attached."},
+  {q:"Do you support languages other than English?", a:"Currently we analyze English resumes best. Multi-language support is on the roadmap — ping us if you need a specific language prioritized."},
+  {q:"Is my data used to train AI models?", a:"No. We do not use your resume content to train any model, ours or third-party."},
+  {q:"Can I delete my account and all data?", a:"Yes. Account deletion removes all saved versions and analyses permanently. There's no grace period — make sure you mean it."}
+];
+
+function renderFAQ(containerId, data, filter){
+  const c = document.getElementById(containerId);
+  if(!c) return;
+  const f = filter.toLowerCase();
+  const items = data.filter(d=> !f || d.q.toLowerCase().includes(f) || d.a.toLowerCase().includes(f));
+  c.innerHTML = items.map((d,i)=>`
+    <div class="border border-ink/8 rounded-2xl bg-white overflow-hidden">
+      <button class="acc-head w-full flex items-center justify-between p-5 text-left" aria-expanded="false">
+        <span class="font-display text-lg font-semibold pr-4">${d.q}</span>
+        <span class="w-8 h-8 rounded-full bg-ink/5 flex items-center justify-center shrink-0 transition-transform acc-icon">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </button>
+      <div class="acc-body"><div class="px-5 pb-5 text-ink/70 text-sm leading-relaxed">${d.a}</div></div>
+    </div>
+  `).join('');
+  c.querySelectorAll('.acc-head').forEach(h=>{
+    h.addEventListener('click',()=>{
+      const body = h.nextElementSibling;
+      const icon = h.querySelector('.acc-icon');
+      const open = body.style.maxHeight && body.style.maxHeight!=='0px';
+      // close all
+      c.querySelectorAll('.acc-body').forEach(b=>b.style.maxHeight='0px');
+      c.querySelectorAll('.acc-icon').forEach(i=>i.style.transform='rotate(0)');
+      c.querySelectorAll('.acc-head').forEach(h=>h.setAttribute('aria-expanded','false'));
+      if(!open){ body.style.maxHeight = body.scrollHeight+'px'; icon.style.transform='rotate(180deg)'; h.setAttribute('aria-expanded','true'); }
+    });
+  });
+}
+document.getElementById('faqSearch')?.addEventListener('input', e=>renderFAQ('faq-main', faqData, e.target.value));
+
+/* =================== ANALYZE WIZARD =================== */
+let wiz = { step:1, goal:null, role:'', company:null, jobTitle:'', jobDesc:'', file:null };
+
+function setStep(n){
+  wiz.step = n;
+  document.querySelectorAll('.wiz-step').forEach(s=>s.classList.add('hidden'));
+  document.querySelector(`.wiz-step[data-step="${n}"]`).classList.remove('hidden');
+  document.querySelectorAll('[data-stepbar]').forEach(b=>b.classList.remove('bg-indigo-brand'));
+  for(let i=1;i<=n;i++) document.querySelector(`[data-stepbar="${i}"]`).classList.add('bg-indigo-brand');
+  document.getElementById('wizStepCount').textContent = `Step ${n} of 4`;
+}
+
+document.querySelectorAll('.goal-card').forEach(c=>{
+  c.addEventListener('click',()=>{
+    document.querySelectorAll('.goal-card').forEach(x=>{x.classList.remove('border-indigo-brand','bg-indigo-soft/40'); x.classList.add('border-ink/8');});
+    c.classList.add('border-indigo-brand','bg-indigo-soft/40'); c.classList.remove('border-ink/8');
+    wiz.goal = c.dataset.goal;
+    const btn = document.getElementById('wiz1Next');
+    btn.disabled=false; btn.classList.remove('bg-ink/10','text-ink/40','cursor-not-allowed'); btn.classList.add('bg-ink','text-cream','hover:bg-ink/90');
+  });
+});
+document.getElementById('wiz1Next').addEventListener('click',()=>{ if(wiz.goal) setStep(2); });
+
+// Step 2
+document.querySelectorAll('#companyChips .chip[data-company]').forEach(c=>{
+  c.addEventListener('click',()=>{
+    document.querySelectorAll('#companyChips .chip').forEach(x=>{x.classList.remove('border-indigo-brand','bg-indigo-soft','text-indigo-brand');});
+    c.classList.add('border-indigo-brand','bg-indigo-soft','text-indigo-brand');
+    wiz.company = c.dataset.company;
+    document.getElementById('companySelected').textContent = `Selected: ${wiz.company}`;
+    enableNext2();
+  });
+});
+document.getElementById('companyCustomBtn').addEventListener('click',()=>{
+  document.getElementById('companyCustomInput').classList.remove('hidden');
+  document.getElementById('companyCustomInput').focus();
+});
+document.getElementById('companyCustomInput').addEventListener('input',e=>{
+  wiz.company = e.target.value.trim() || null;
+  document.getElementById('companySelected').textContent = wiz.company? `Selected: ${wiz.company}` : '';
+  enableNext2();
+});
+function enableNext2(){
+  if(wiz.company){
+    const btn = document.getElementById('wiz2Next');
+    btn.disabled=false; btn.classList.remove('bg-ink/10','text-ink/40','cursor-not-allowed'); btn.classList.add('bg-ink','text-cream','hover:bg-ink/90');
+  }
+}
+document.getElementById('roleInput').addEventListener('input',e=>{ wiz.role = e.target.value.trim(); checkNext2(); });
+function checkNext2(){
+  const ok = wiz.role.length>1 && wiz.company;
+  const btn = document.getElementById('wiz2Next');
+  if(ok){ btn.disabled=false; btn.classList.remove('bg-ink/10','text-ink/40','cursor-not-allowed'); btn.classList.add('bg-ink','text-cream','hover:bg-ink/90'); }
+  else { btn.disabled=true; btn.classList.add('bg-ink/10','text-ink/40','cursor-not-allowed'); btn.classList.remove('bg-ink','text-cream','hover:bg-ink/90'); }
+}
+document.getElementById('wiz2Next').addEventListener('click',()=>{ if(wiz.role && wiz.company) setStep(3); });
+document.getElementById('roleInput').addEventListener('input',checkNext2);
+
+// Step 3
+document.getElementById('wiz3Next').addEventListener('click',()=>{
+  wiz.jobTitle = document.getElementById('jobTitle').value.trim();
+  wiz.jobDesc = document.getElementById('jobDesc').value.trim();
+  setStep(4);
+});
+
+// Step 4 - file upload
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click',()=>fileInput.click());
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.add('drag-active');}));
+['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.remove('drag-active');}));
+dropZone.addEventListener('drop',e=>{
+  const f = e.dataTransfer.files[0];
+  if(f) handleFile(f);
+});
+fileInput.addEventListener('change',e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+document.getElementById('useSample').addEventListener('click',()=>{
+  wiz.file = {name:'Aarav_Sharma_Resume.pdf', size:'182 KB', sample:true};
+  showFile();
+});
+function handleFile(f){
+  hideError();
+  const ext = f.name.split('.').pop().toLowerCase();
+  if(!['pdf','docx','doc'].includes(ext)){ showError('Unsupported file', 'Please upload a PDF or DOCX file. Other formats like .txt, .jpg, or .pages aren\'t supported yet.'); return; }
+  if(f.size > 5*1024*1024){ showError('File too large', `Your file is ${(f.size/1024/1024).toFixed(1)} MB. The limit is 5 MB — try compressing your PDF.`); return; }
+  wiz.file = {name:f.name, size: (f.size/1024).toFixed(0)+' KB', file:f};
+  showFile();
+}
+function showFile(){
+  document.getElementById('fileName').textContent = wiz.file.name;
+  document.getElementById('fileSize').textContent = wiz.file.size;
+  document.getElementById('filePreview').classList.remove('hidden');
+  const btn = document.getElementById('wiz4Analyze');
+  btn.disabled=false; btn.classList.remove('bg-ink/10','text-ink/40','cursor-not-allowed'); btn.classList.add('bg-ink','text-cream','hover:bg-ink/90');
+}
+document.getElementById('fileRemove').addEventListener('click',()=>{
+  wiz.file=null;
+  document.getElementById('filePreview').classList.add('hidden');
+  fileInput.value='';
+  const btn = document.getElementById('wiz4Analyze');
+  btn.disabled=true; btn.classList.add('bg-ink/10','text-ink/40','cursor-not-allowed'); btn.classList.remove('bg-ink','text-cream','hover:bg-ink/90');
+});
+function showError(title,msg){
+  const box = document.getElementById('errorBox');
+  document.getElementById('errorTitle').textContent = title;
+  document.getElementById('errorMsg').textContent = msg;
+  box.classList.remove('hidden');
+}
+function hideError(){ document.getElementById('errorBox').classList.add('hidden'); }
+
+document.getElementById('wiz4Analyze').addEventListener('click',runAnalysis);
+
+const stages = [
+  {label:'Reading document structure…', pct:12},
+  {label:'Extracting text & sections…', pct:28},
+  {label:'Detecting contact info & links…', pct:42},
+  {label:'Parsing skills & keywords…', pct:58},
+  {label:'Scoring ATS compatibility…', pct:72},
+  {label:'Matching against job description…', pct:86},
+  {label:'Compiling your report…', pct:96},
+  {label:'Done.', pct:100}
+];
+function runAnalysis(){
+  hideError();
+  document.getElementById('analyzingOverlay').classList.remove('hidden');
+  document.getElementById('analyzingOverlay').scrollIntoView({behavior:'smooth',block:'center'});
+  const prog = document.getElementById('analyzeProgress');
+  const stageEl = document.getElementById('analyzeStage');
+  const list = document.getElementById('stageList');
+  list.innerHTML='';
+  let i=0;
+  function tick(){
+    if(i>=stages.length){
+      setTimeout(()=>{ routeTo('dashboard'); }, 500);
+      return;
+    }
+    const s = stages[i];
+    prog.style.width = s.pct+'%';
+    stageEl.textContent = s.label;
+    list.innerHTML += `<li class="flex items-center gap-2 text-ink/70"><span class="w-1.5 h-1.5 rounded-full bg-indigo-brand"></span>${s.label}</li>`;
+    i++;
+    setTimeout(tick, 380+Math.random()*240);
+  }
+  tick();
+}
+
+document.querySelectorAll('.wiz-back').forEach(b=>b.addEventListener('click',()=>setStep(parseInt(b.dataset.back)-1)));
+
+/* =================== DASHBOARD =================== */
+const categories = [
+  {key:'ATS', score:64, status:'mid', label:'Needs work', why:'Two-column layout risks parser confusion. Headers and dates parsed correctly, but the right column was skipped on first pass.', strengths:['All standard section headers detected','Dates in consistent format','No images or text in graphics'], issues:['Two-column layout','Custom font may not embed on all systems','Header uses icons instead of plain text'], fixes:['Switch to single-column layout','Use Arial, Calibri, or Georgia','Replace icon-based contact row with plain text']},
+  {key:'Skills', score:81, status:'good', label:'Good', why:'Strong core stack — React, JavaScript, Node, MongoDB — well-organized. Missing a few role-specific signals like Docker and AWS.', strengths:['Categorized by type','Includes both languages and tools','Lists 12+ skills'], issues:['Missing Docker, AWS, TypeScript','No skill proficiency indicator','Listed alphabetically, not by relevance'], fixes:['Add Docker, AWS, TypeScript to top','Group by "Core" and "Familiar"','Reorder so role-critical skills appear first']},
+  {key:'Experience', score:58, status:'mid', label:'Needs work', why:'You have a TCS internship — good — but bullets describe tasks, not impact. Recruiters scan for numbers.', strengths:['Internship at a recognized company','Dates and location included','3 bullet points'], issues:['No measurable outcomes','Bullets start with "Responsible for"','No tech stack mentioned per role'], fixes:['Add metrics: "reduced X by Y%"','Start bullets with action verbs','Mention the stack used in each role']},
+  {key:'Education', score:90, status:'good', label:'Good', why:'Clear degree, institution, dates, and GPA. Nothing to fix here.', strengths:['Degree, branch, and CGPA listed','Dates included','Institution recognizable'], issues:[], fixes:[]},
+  {key:'Projects', score:70, status:'mid', label:'Needs work', why:'Three solid projects — but descriptions lack impact numbers and one has no live link.', strengths:['3 projects with names','Brief tech stack for each','One has a live demo'], issues:['ShopFlow has no link','No metrics (users, speed, scale)','Project descriptions too long'], fixes:['Add live link + GitHub to each','Add 1 metric per project ("32% faster load")','Trim to 2 bullets each']},
+  {key:'Keywords', score:67, status:'mid', label:'Needs work', why:'Your resume matches 60% of JD keywords. Missing high-frequency terms like "Docker" and "CI/CD".', strengths:['Frontend, React, JavaScript present','API and REST mentioned','"Optimization" appears twice'], issues:['Docker missing (4× in JD)','AWS missing (3× in JD)','CI/CD missing entirely'], fixes:['Add missing keywords where you have them','Don\'t keyword-stuff — integrate naturally','Mirror the JD\'s terminology']},
+  {key:'Formatting', score:75, status:'mid', label:'Needs work', why:'Clean type and spacing, but two columns hurt parsing and the right column is denser than the left.', strengths:['Consistent font sizes','Clear visual hierarchy','Good use of whitespace'], issues:['Two-column layout','Inconsistent bullet styles','Right column overflows page margin'], fixes:['Single column, full width','Use one bullet style throughout','Keep 0.5" margins minimum']},
+  {key:'Readability', score:84, status:'good', label:'Good', why:'Sentences are short and scannable. Action verbs present in most bullets.', strengths:['Average bullet length: 14 words','Action verbs in 8/10 bullets','No paragraphs of text'], issues:['One 30-word bullet in experience','Passive voice in 2 places'], fixes:['Split the long bullet into two','Rewrite passive constructions']},
+  {key:'Contact', score:88, status:'good', label:'Good', why:'Email, phone, and LinkedIn are present and correctly formatted.', strengths:['Email present and valid format','Phone with country code','LinkedIn URL included'], issues:['GitHub link missing','Location only as city, no country'], fixes:['Add GitHub link in header','Add country to location']},
+  {key:'Links', score:60, status:'mid', label:'Needs work', why:'LinkedIn and email present. GitHub is missing — critical for a developer role.', strengths:['LinkedIn URL is clean','Email is clickable'], issues:['No GitHub link','No portfolio link','Links buried in footer, not header'], fixes:['Add GitHub link at the top','Add portfolio if you have one','Move links to header, plain text']},
+  {key:'Job Match', score:68, status:'mid', label:'Needs work', why:'60% of JD requirements are present in your resume. Gap is in DevOps-adjacent skills.', strengths:['Matches on React, JavaScript, REST','Mentions testing','Has team collaboration signals'], issues:['Missing Docker, AWS, CI/CD','No mention of monitoring or performance tooling','No seniority signal (mentoring, ownership)'], fixes:['Add Docker & AWS to skills','Reference a CI/CD pipeline in a project','Add a line about mentoring or ownership']}
+];
+
+function badgeClass(s){ return s==='good'?'badge-good':s==='mid'?'badge-mid':s==='low'?'badge-low':s==='miss'?'badge-miss':'badge-na'; }
+function statusText(s){ return s==='good'?'Good':s==='mid'?'Needs work':s==='low'?'Weak':s==='miss'?'Missing':'N/A'; }
+
+let dashboardInited=false;
+function initDashboard(){
+  // score ring animation
+  const ring = document.getElementById('scoreRing');
+  const num = document.getElementById('scoreNum');
+  const total = 72;
+  const circ = 2*Math.PI*84;
+  ring.style.strokeDasharray = circ;
+  ring.style.strokeDashoffset = circ;
+  let cur = 0;
+  const t0 = performance.now();
+  function anim(now){
+    const p = Math.min(1,(now-t0)/1200);
+    const eased = 1-Math.pow(1-p,3);
+    ring.style.strokeDashoffset = circ*(1-(total/100)*eased);
+    num.textContent = Math.round(total*eased);
+    if(p<1) requestAnimationFrame(anim);
+  }
+  requestAnimationFrame(anim);
+
+  // category cards
+  const grid = document.getElementById('categoryGrid');
+  grid.innerHTML = categories.map(c=>`
+    <div class="cat-card bg-white rounded-2xl border border-ink/8 p-5 shadow-card hover:shadow-soft hover:border-indigo-brand/30 transition cursor-pointer" data-cat="${c.key}">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-ink/50 uppercase tracking-wider">${c.key}</span>
+        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass(c.status)}">${c.label}</span>
+      </div>
+      <div class="flex items-end gap-2 mt-3">
+        <span class="font-display text-3xl font-bold">${c.score}</span>
+        <span class="text-xs text-ink/40 mb-1">/100</span>
+      </div>
+      <div class="mt-3 h-1.5 rounded-full bg-ink/8 overflow-hidden">
+        <div class="h-full rounded-full ${c.status==='good'?'bg-sage':c.status==='mid'?'bg-amber-brand':'bg-rose-brand'}" style="width:${c.score}%"></div>
+      </div>
+      <p class="text-xs text-ink/60 mt-3 leading-relaxed line-clamp-2">${c.why.split('.')[0]}.</p>
+      <div class="mt-3 flex items-center gap-1 text-xs font-semibold text-indigo-brand">
+        Why this score?
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('.cat-card').forEach(card=>{
+    card.addEventListener('click',()=>openCatModal(card.dataset.cat));
+  });
+
+  // priority fixes
+  const fixes = [
+    {p:'High', t:'Switch to a single-column layout', d:'ATS parsers skip your right column. One change, big score lift.', cat:'ATS'},
+    {p:'High', t:'Add GitHub link in header', d:'Recruiters for developer roles click this first. It\'s currently missing.', cat:'Links'},
+    {p:'High', t:'Add Docker & AWS to skills', d:'Mentioned 4× and 3× in the JD. Adding them (truthfully) lifts job match fast.', cat:'Skills'},
+    {p:'Medium', t:'Quantify project impact', d:'Replace "built a feature" with "built X, reducing Y by Z%". Add one number per project.', cat:'Projects'},
+    {p:'Medium', t:'Rewrite experience bullets', d:'Start with action verbs and outcomes. Drop "Responsible for…".', cat:'Experience'},
+    {p:'Low', t:'Add country to location', d:'Small fix — international recruiters filter by country.', cat:'Contact'}
+  ];
+  document.getElementById('priorityList').innerHTML = fixes.map((f,i)=>`
+    <li class="flex items-start gap-3 p-3 rounded-xl hover:bg-ink/5 transition">
+      <span class="w-7 h-7 rounded-lg ${f.p==='High'?'bg-rose-soft text-rose-brand':f.p==='Medium'?'bg-amber-soft text-amber-brand':'bg-sand text-ink/60'} flex items-center justify-center font-display font-bold text-sm shrink-0">${i+1}</span>
+      <div class="flex-1">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-sm">${f.t}</span>
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${f.p==='High'?'bg-rose-soft text-rose-brand':f.p==='Medium'?'bg-amber-soft text-amber-brand':'bg-sand text-ink/60'}">${f.p}</span>
+        </div>
+        <p class="text-xs text-ink/60 mt-1 leading-relaxed">${f.d}</p>
+        <div class="text-[11px] text-ink/40 mt-1">Category: ${f.cat}</div>
+      </div>
+      <button class="text-xs font-semibold text-indigo-brand underline-grow shrink-0">Fix →</button>
+    </li>
+  `).join('');
+
+  // radar
+  if(window._radar) window._radar.destroy();
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  window._radar = new Chart(ctx, {
+    type:'radar',
+    data:{
+      labels: categories.map(c=>c.key),
+      datasets:[
+        {label:'Your resume', data: categories.map(c=>c.score), backgroundColor:'rgba(79,70,229,.18)', borderColor:'#4F46E5', borderWidth:2, pointBackgroundColor:'#4F46E5', pointRadius:3},
+        {label:'Role benchmark', data: categories.map(c=>c.key==='Education'?85:75), backgroundColor:'rgba(232,163,61,.12)', borderColor:'#E8A33D', borderWidth:1.5, borderDash:[4,4], pointRadius:0}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{r:{min:0,max:100,grid:{color:'rgba(15,14,23,.08)'},angleLines:{color:'rgba(15,14,23,.08)'},pointLabels:{font:{size:10,family:'Inter'},color:'#0F0E17'},ticks:{display:false,stepSize:25}}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,boxHeight:10,usePointStyle:true}}}
+    }
+  });
+  dashboardInited=true;
+}
+
+function openCatModal(key){
+  const c = categories.find(x=>x.key===key);
+  const modal = document.createElement('div');
+  modal.className='fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-ink/40 backdrop-blur-sm';
+  modal.innerHTML=`
+    <div class="bg-cream rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-ring" role="dialog" aria-modal="true">
+      <div class="sticky top-0 bg-cream/95 backdrop-blur px-6 py-4 border-b border-ink/8 flex items-center justify-between">
+        <div>
+          <div class="text-xs font-semibold text-ink/50 uppercase tracking-wider">Category</div>
+          <h3 class="font-display text-xl font-bold">${c.key} · <span class="${c.status==='good'?'s-good':c.status==='mid'?'s-mid':'s-low'}">${c.score}/100</span></h3>
+        </div>
+        <button class="cat-close p-2 rounded-lg hover:bg-ink/5" aria-label="Close">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-5">
+        <div>
+          <div class="text-xs font-semibold text-ink/50 uppercase tracking-wider mb-1">Why this score?</div>
+          <p class="text-sm text-ink/70 leading-relaxed">${c.why}</p>
+        </div>
+        <div>
+          <div class="text-xs font-semibold text-sage uppercase tracking-wider mb-2 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-sage"></span>Strengths</div>
+          <ul class="space-y-1.5 text-sm text-ink/70">${c.strengths.length?c.strengths.map(s=>`<li class="flex gap-2"><span class="text-sage mt-1">✓</span>${s}</li>`).join(''):'<li class="text-ink/40 italic">None detected yet</li>'}</ul>
+        </div>
+        <div>
+          <div class="text-xs font-semibold text-rose-brand uppercase tracking-wider mb-2 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rose-brand"></span>Issues</div>
+          <ul class="space-y-1.5 text-sm text-ink/70">${c.issues.length?c.issues.map(s=>`<li class="flex gap-2"><span class="text-rose-brand mt-1">!</span>${s}</li>`).join(''):'<li class="text-ink/40 italic">No major issues</li>'}</ul>
+        </div>
+        <div>
+          <div class="text-xs font-semibold text-indigo-brand uppercase tracking-wider mb-2 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-indigo-brand"></span>Suggested fixes</div>
+          <ul class="space-y-1.5 text-sm text-ink/70">${c.fixes.length?c.fixes.map((s,i)=>`<li class="flex gap-2"><span class="text-indigo-brand font-bold mt-0.5">${i+1}.</span>${s}</li>`).join(''):'<li class="text-ink/40 italic">Nothing to fix here</li>'}</ul>
+        </div>
+      </div>
+      <div class="sticky bottom-0 bg-cream/95 backdrop-blur px-6 py-4 border-t border-ink/8 flex justify-end gap-2">
+        <button class="cat-close px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-ink/5">Close</button>
+        <a href="#" data-route="report" class="cat-goto-report px-4 py-2.5 rounded-xl bg-indigo-brand text-white text-sm font-semibold hover:bg-indigo-deep">Open full report →</a>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelectorAll('.cat-close').forEach(b=>b.addEventListener('click',()=>modal.remove()));
+  modal.addEventListener('click',e=>{ if(e.target===modal) modal.remove(); });
+  modal.querySelector('.cat-goto-report').addEventListener('click',e=>{e.preventDefault(); modal.remove(); routeTo('report');});
+}
+
+/* =================== REPORT =================== */
+const reportData = {
+  contact: { status:'good', label:'Good',
+    items:[
+      {k:'Name', v:'Aarav Sharma', s:'good'},
+      {k:'Email', v:'aarav.sharma@gmail.com', s:'good'},
+      {k:'Phone', v:'+91 98••• •12 345', s:'mid', note:'Number partially parsed — confirm it\'s plain text in the original.'},
+      {k:'LinkedIn', v:'linkedin.com/in/aarav-sharma', s:'good'},
+      {k:'GitHub', v:'—', s:'miss', note:'Missing. For a developer role, this is high-priority.'},
+      {k:'Location', v:'Bengaluru, India', s:'good'},
+    ],
+    summary:'Contact info is mostly complete and correctly formatted. Adding GitHub and ensuring the phone is plain text would push this section to excellent.',
+    suggestions:['Add a GitHub link to your header (right next to LinkedIn).','Re-type your phone number as plain text — avoid hyperlink auto-formatting.','Consider adding your portfolio link if you have one.']
+  },
+  summary: { status:'mid', label:'Needs improvement',
+    text:'"Enthusiastic frontend developer with experience in React and JavaScript. Looking for an opportunity to grow and contribute to meaningful projects."',
+    analysis:'Your summary is generic. It could belong to anyone applying for a frontend role. It doesn\'t mention your strongest project, your stack specifics, or what kind of team you want to join.',
+    suggestions:['Replace with a 2-line summary that names your strongest project and what you want to build next.','Example: "Frontend developer who shipped ShopFlow (1.2k DAU) and a real-time analytics dashboard. Looking to build performant, accessible web apps at scale."','Drop the word "enthusiastic" — your projects should show it.']
+  },
+  education: { status:'good', label:'Good',
+    items:[
+      {k:'Degree', v:'B.Tech, Computer Science', s:'good'},
+      {k:'Institution', v:'PES University, Bengaluru', s:'good'},
+      {k:'Dates', v:'2021 – 2025', s:'good'},
+      {k:'CGPA', v:'8.4 / 10', s:'good'},
+      {k:'Relevant coursework', v:'Data Structures, Web Technologies, DBMS, OS', s:'good'},
+    ],
+    summary:'Education section is clean and complete. No changes needed.',
+    suggestions:[]
+  },
+  experience: { status:'mid', label:'Needs improvement',
+    roles:[
+      {title:'Frontend Developer Intern', company:'TCS', dates:'May 2024 – Jul 2024', bullets:[
+        'Responsible for developing UI components for an internal dashboard.',
+        'Worked with the team to fix bugs and improve performance.',
+        'Used React and TypeScript for the frontend.'
+      ], issues:['No measurable outcomes','Passive "Responsible for" opener','No stack-by-stack breakdown','Only 3 bullets — could add 1–2 more']}
+    ],
+    summary:'You have a real internship at a recognized company — that\'s a strength. But the bullets describe what you did, not what changed because of you.',
+    suggestions:['Rewrite each bullet to start with an action verb and end with a metric.','Example: "Built 12 reusable React components, cutting dashboard load time from 3.2s to 1.4s."','Add the stack used at the start of the role, not the end.','Add a 4th bullet about a specific problem you owned.']
+  },
+  projects: { status:'mid', label:'Needs improvement',
+    projects:[
+      {name:'ShopFlow', stack:'React, Node, MongoDB', link:'Missing', bullets:['E-commerce frontend with cart and checkout','Reduced cart abandonment by 32%'], issues:['No live link','No GitHub link']},
+      {name:'Realtime Analytics Dashboard', stack:'React, Chart.js, WebSocket', link:'github.com/aarav/dash', bullets:['Live dashboard rendering 1.2k events/sec','Custom WebSocket adapter'], issues:['Bullets lack user-facing impact']},
+      {name:'DevNotes', stack:'Next.js, Prisma, PostgreSQL', link:'Missing', bullets:['Markdown note app with collaboration','Built as a side project'], issues:['No links','Vague last bullet']}
+    ],
+    summary:'Three solid projects — a good number for a fresher. But two are missing live/GitHub links, and impact numbers are inconsistent.',
+    suggestions:['Add a live demo + GitHub link to every project.','Add one concrete metric per project — users, speed, scale, or feedback.','Keep bullets to 2 lines max — split long ones.','If a project has no measurable outcome, consider replacing it.']
+  },
+  skills: { status:'good', label:'Good',
+    groups:[
+      {cat:'Core (relevant)', skills:['React','JavaScript','TypeScript','Node.js','HTML/CSS','REST API'], s:'good'},
+      {cat:'Tools & Infra', skills:['Git','VS Code','Figma','Postman'], s:'good'},
+      {cat:'Databases', skills:['MongoDB','PostgreSQL','Firebase'], s:'good'},
+      {cat:'Missing for role', skills:['Docker (high)','AWS (high)','CI/CD (medium)'], s:'miss'},
+      {cat:'Soft / General', skills:['Communication','Team collaboration','Problem solving'], s:'mid', note:'Generic soft skills — recruiters often skip these. Replace with demonstrated examples.'}
+    ],
+    summary:'Skills are well-organized and relevant to the role. Three high-priority gaps: Docker, AWS, and CI/CD.',
+    suggestions:['Add Docker, AWS, and TypeScript (truthfully) under Tools & Infra.','Drop the "Soft skills" row — show these in your experience bullets instead.','Reorder so role-critical skills (React, TypeScript) appear first.']
+  },
+  certifications: { status:'na', label:'Not relevant',
+    items:[],
+    summary:'No certifications listed. For a frontend role at most companies, certifications aren\'t required — your projects usually carry more weight. If you have a relevant one (e.g., AWS Cloud Practitioner, Meta Frontend), adding it can help for ATS keyword matches.',
+    suggestions:['If you have AWS Cloud Practitioner or similar, add it.','Don\'t add low-value certs just to fill space.','Coursera/Udemy courses count — list them under "Coursework" if relevant.']
+  },
+  links: { status:'mid', label:'Needs improvement',
+    items:[
+      {k:'LinkedIn', v:'linkedin.com/in/aarav-sharma', s:'good'},
+      {k:'GitHub', v:'Missing', s:'miss', note:'Critical for developer roles.'},
+      {k:'Portfolio', v:'Missing', s:'mid', note:'Recommended for frontend — even a 1-page site counts.'},
+      {k:'Live project links', v:'1 of 3 projects has a live link', s:'mid'}
+    ],
+    summary:'LinkedIn is present. GitHub and a portfolio are missing. For frontend developer roles, recruiters expect at least a GitHub link.',
+    suggestions:['Add GitHub link at the top of your resume, near your name.','If you don\'t have a portfolio, build a simple one-page site — even a static deploy works.','Ensure every project has either a live link or a GitHub link.']
+  },
+  ats: { status:'mid', label:'Needs improvement',
+    risks:[
+      {risk:'Two-column layout', severity:'High', impact:'Right column may be skipped by parsers like Workday and Greenhouse.'},
+      {risk:'Custom font (Poppins)', severity:'Low', impact:'Embeds correctly in most cases, but fallback may break spacing.'},
+      {risk:'Contact info as icons', severity:'Medium', impact:'Phone and email icons aren\'t parsed as text. Use plain text labels.'},
+      {risk:'Header section as image', severity:'Low', impact:'Detected as a graphic — but contained no critical text.'}
+    ],
+    summary:'Your resume will be parsed, but the two-column layout is the single biggest ATS risk. Switching to single-column would resolve most issues at once.',
+    suggestions:['Switch to single-column layout — single highest-impact fix.','Replace icon-based contact row with "Email: …  Phone: …".','Use a system-safe font: Arial, Calibri, or Georgia.','Avoid text inside headers/footers of the PDF.']
+  },
+  jobmatch: { status:'mid', label:'Needs improvement',
+    summary:'Your resume covers 60% of the JD\'s required signals. The gaps are concentrated in DevOps-adjacent skills (Docker, AWS, CI/CD) and seniority signals.',
+    matched:['React','JavaScript','TypeScript','REST API','Git','Testing','Collaboration'],
+    missing:[{skill:'Docker', weight:'High', inJD:4},{skill:'AWS (EC2, S3)', weight:'High', inJD:3},{skill:'CI/CD pipelines', weight:'Medium', inJD:2},{skill:'Performance monitoring', weight:'Medium', inJD:2},{skill:'Mentoring / ownership', weight:'Low', inJD:1}],
+    suggestions:['Add Docker & AWS — these are the biggest single lifts.','Reference a CI/CD pipeline in one of your project bullets.','Add one line about mentoring or owning a feature end-to-end.','Mirror the JD\'s wording where you have the skill.']
+  }
+};
+
+function initReport(tab){
+  document.querySelectorAll('.report-tab').forEach(t=>{
+    t.classList.remove('tab-active','text-ink'); t.classList.add('text-ink/60','border-transparent');
+    if(t.dataset.tab===tab){ t.classList.add('tab-active'); t.classList.remove('text-ink/60','border-transparent'); }
+  });
+  const d = reportData[tab];
+  const c = document.getElementById('reportContent');
+  c.innerHTML = renderReportSection(tab, d);
+}
+document.querySelectorAll('.report-tab').forEach(t=>t.addEventListener('click',()=>initReport(t.dataset.tab)));
+
+function renderReportSection(tab, d){
+  const badge = `<span class="text-xs font-bold px-2.5 py-1 rounded-full ${badgeClass(d.status==='na'?'na':d.status==='good'?'good':d.status==='mid'?'mid':'miss')}">${d.label}</span>`;
+  let body = '';
+
+  if(['contact','links','ats'].includes(tab)){
+    if(tab==='ats'){
+      body = `
+        <div class="grid sm:grid-cols-2 gap-3">
+          ${d.risks.map(r=>`
+            <div class="p-4 rounded-xl ${r.severity==='High'?'bg-rose-soft/60':r.severity==='Medium'?'bg-amber-soft/60':'bg-sand/60'}">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-semibold text-sm">${r.risk}</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${r.severity==='High'?'badge-low':r.severity==='Medium'?'badge-mid':'badge-na'}">${r.severity}</span>
+              </div>
+              <p class="text-xs text-ink/60 mt-1 leading-relaxed">${r.impact}</p>
+            </div>
+          `).join('')}
+        </div>`;
+    } else {
+      body = `
+        <div class="space-y-2.5">
+          ${d.items.map(it=>`
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-white border border-ink/8">
+              <span class="w-24 text-xs font-semibold text-ink/50 uppercase tracking-wider shrink-0">${it.k}</span>
+              <span class="flex-1 text-sm font-mono ${it.s==='miss'?'text-rose-brand':it.s==='mid'?'text-amber-brand':'text-ink'}">${it.v}</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass(it.s==='miss'?'miss':it.s==='mid'?'mid':'good')}">${statusText(it.s==='miss'?'miss':it.s==='mid'?'mid':'good')}</span>
+            </div>
+            ${it.note?`<div class="text-xs text-ink/60 -mt-1 ml-3 pl-24">↳ ${it.note}</div>`:''}
+          `).join('')}
+        </div>`;
+    }
+  } else if(tab==='summary'){
+    body = `<div class="p-4 rounded-xl bg-white border border-ink/8"><div class="text-xs font-semibold text-ink/50 uppercase tracking-wider mb-2">Your current summary</div><p class="text-sm italic text-ink/80 leading-relaxed">${d.text}</p></div>
+      <div class="p-4 rounded-xl bg-amber-soft/40 border border-amber-brand/20"><div class="text-xs font-semibold text-amber-brand uppercase tracking-wider mb-2">Analysis</div><p class="text-sm text-ink/70 leading-relaxed">${d.analysis}</p></div>`;
+  } else if(tab==='education'){
+    body = `<div class="p-4 rounded-xl bg-white border border-ink/8"><div class="grid sm:grid-cols-2 gap-3 text-sm">
+      ${d.items.map(it=>`<div class="flex justify-between py-1.5 border-b border-ink/5 last:border-0"><span class="text-ink/60">${it.k}</span><span class="font-medium">${it.v}</span></div>`).join('')}
+    </div></div>`;
+  } else if(tab==='experience'){
+    body = d.roles.map(r=>`
+      <div class="p-5 rounded-xl bg-white border border-ink/8">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div><div class="font-display text-lg font-semibold">${r.title}</div><div class="text-sm text-ink/60">${r.company} · ${r.dates}</div></div>
+        </div>
+        <ul class="mt-4 space-y-2 text-sm text-ink/80">${r.bullets.map(b=>`<li class="flex gap-2"><span class="text-ink/30">•</span>${b}</li>`).join('')}</ul>
+        <div class="mt-4 pt-4 border-t border-ink/8">
+          <div class="text-xs font-semibold text-rose-brand uppercase tracking-wider mb-2">Issues</div>
+          <ul class="space-y-1 text-xs text-ink/70">${r.issues.map(i=>`<li class="flex gap-2"><span class="text-rose-brand">!</span>${i}</li>`).join('')}</ul>
+        </div>
+      </div>`).join('');
+  } else if(tab==='projects'){
+    body = d.projects.map(p=>`
+      <div class="p-5 rounded-xl bg-white border border-ink/8">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="font-display text-lg font-semibold">${p.name}</div>
+          <span class="text-xs font-mono text-ink/50">${p.stack}</span>
+        </div>
+        <div class="text-xs mt-1 ${p.link==='Missing'?'text-rose-brand':'text-sage'}">Link: ${p.link}</div>
+        <ul class="mt-3 space-y-2 text-sm text-ink/80">${p.bullets.map(b=>`<li class="flex gap-2"><span class="text-ink/30">•</span>${b}</li>`).join('')}</ul>
+        <div class="mt-3 pt-3 border-t border-ink/8">
+          <div class="text-xs font-semibold text-amber-brand uppercase tracking-wider mb-1">Issues</div>
+          <ul class="space-y-1 text-xs text-ink/70">${p.issues.map(i=>`<li class="flex gap-2"><span class="text-amber-brand">!</span>${i}</li>`).join('')}</ul>
+        </div>
+      </div>`).join('');
+  } else if(tab==='skills'){
+    body = `<div class="space-y-3">${d.groups.map(g=>`
+      <div class="p-4 rounded-xl ${g.s==='good'?'bg-sage/10':g.s==='miss'?'bg-rose-soft/60':g.s==='mid'?'bg-amber-soft/60':'bg-white border border-ink/8'}">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-semibold text-sm">${g.cat}</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass(g.s==='miss'?'miss':g.s==='good'?'good':'mid')}">${g.s==='miss'?'Missing':g.s==='good'?'Good':'Needs work'}</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5">${g.skills.map(s=>`<span class="text-xs px-2.5 py-1 rounded-lg ${g.s==='miss'?'bg-rose-brand/15 text-rose-brand':g.s==='good'?'bg-white text-ink/80 border border-ink/10':'bg-amber-brand/15 text-amber-brand'}">${s}</span>`).join('')}</div>
+        ${g.note?`<div class="text-xs text-ink/60 mt-2">↳ ${g.note}</div>`:''}
+      </div>`).join('')}</div>`;
+  } else if(tab==='certifications'){
+    body = `<div class="p-5 rounded-xl bg-sand/50 border border-ink/8 text-center"><div class="text-sm text-ink/60">${d.summary}</div></div>`;
+  } else if(tab==='jobmatch'){
+    body = `
+      <div class="grid sm:grid-cols-2 gap-3 mb-4">
+        <div class="p-4 rounded-xl bg-sage/10">
+          <div class="text-xs font-semibold text-sage uppercase tracking-wider mb-2">Matched (${d.matched.length})</div>
+          <div class="flex flex-wrap gap-1.5">${d.matched.map(s=>`<span class="text-xs px-2.5 py-1 rounded-lg bg-white border border-ink/10 text-ink/80">${s}</span>`).join('')}</div>
+        </div>
+        <div class="p-4 rounded-xl bg-rose-soft/60">
+          <div class="text-xs font-semibold text-rose-brand uppercase tracking-wider mb-2">Missing (${d.missing.length})</div>
+          <div class="space-y-1.5">${d.missing.map(m=>`<div class="flex justify-between text-xs"><span class="text-ink/80">${m.skill}</span><span class="font-bold ${m.weight==='High'?'text-rose-brand':m.weight==='Medium'?'text-amber-brand':'text-ink/50'}">${m.weight} · ${m.inJD}× in JD</span></div>`).join('')}</div>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="grid lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-8">
+        <div class="bg-white rounded-2xl border border-ink/8 p-6 shadow-card">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="font-display text-2xl font-bold capitalize">${tab==='jobmatch'?'Job match':tab==='ats'?'ATS analysis':tab}</h2>
+            ${badge}
+          </div>
+          ${body}
+          <div class="mt-6 p-4 rounded-xl bg-indigo-soft/40 border border-indigo-brand/15">
+            <div class="text-xs font-semibold text-indigo-brand uppercase tracking-wider mb-1">Summary</div>
+            <p class="text-sm text-ink/70 leading-relaxed">${d.summary}</p>
+          </div>
+        </div>
+      </div>
+      <div class="lg:col-span-4">
+        <div class="bg-white rounded-2xl border border-ink/8 p-6 shadow-card sticky top-20">
+          <div class="text-xs font-semibold text-indigo-brand uppercase tracking-wider mb-3">Suggested fixes</div>
+          ${d.suggestions.length?`<ul class="space-y-2.5 text-sm">${d.suggestions.map((s,i)=>`<li class="flex gap-2"><span class="text-indigo-brand font-bold mt-0.5">${i+1}.</span><span class="text-ink/70">${s}</span></li>`).join('')}</ul>`:'<p class="text-sm text-ink/40 italic">No fixes needed for this section.</p>'}
+          <a href="#" data-route="interview" class="mt-6 block text-center px-4 py-3 rounded-xl bg-ink text-cream text-sm font-semibold hover:bg-ink/90 transition">Practice interview questions →</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* =================== INTERVIEW PREP =================== */
+const prepQuestions = [
+  {cat:'technical', q:'Walk me through how the React reconciliation algorithm works, and one optimization you\'d make to a slow list render.', hint:'You mentioned React in skills — be ready to talk internals, not just usage.'},
+  {cat:'technical', q:'Your ShopFlow project mentions a 32% drop in cart abandonment. What did you change, and how did you measure it?', hint:'Numbers on your resume are fair game. Know the before, the after, and the method.'},
+  {cat:'technical', q:'How would you optimize a frontend that loads 1.2k events per second in your analytics dashboard?', hint:'You claimed real-time performance. Be ready to defend it.'},
+  {cat:'hr', q:'Tell me about yourself — in 60 seconds.', hint:'Lead with a project, not your degree. End with why this role.'},
+  {cat:'hr', q:'Why Google, and why this specific role?', hint:'Generic answers fail. Reference a product, a value, or a team.'},
+  {cat:'hr', q:'Describe a time you disagreed with a teammate. How did you handle it?', hint:'Use STAR. Outcome matters more than the conflict.'},
+  {cat:'project', q:'Tell me about DevNotes. What was the hardest technical decision you made?', hint:'Pick a real trade-off — schema choice, auth approach, realtime strategy.'},
+  {cat:'project', q:'Why did you build ShopFlow as a side project? What did you learn that you couldn\'t from coursework?', hint:'Show initiative. Mention a specific failure too.'},
+  {cat:'project', q:'If you had two more weeks on the analytics dashboard, what would you improve?', hint:'Have a real answer — performance, accessibility, or testing.'},
+  {cat:'skill', q:'You list TypeScript. Show me how you\'d type a React component that takes a generic prop.', hint:'Don\'t list a skill you can\'t demonstrate. Be honest about depth.'},
+  {cat:'skill', q:'Walk me through how you\'d debug a memory leak in a React app.', hint:'DevTools, profiler, effect cleanup. Show a method.'},
+  {cat:'skill', q:'You listed MongoDB and PostgreSQL. When would you choose one over the other?', hint:'Have a real opinion. Schema, consistency, scale.'},
+  {cat:'role', q:'What does a frontend developer at Google do differently from one at a startup?', hint:'Scale, tooling, design systems, accessibility, performance budgets.'},
+  {cat:'role', q:'How would you contribute to a design system team in your first 90 days?', hint:'Learn the system, ship one component, propose one improvement.'},
+  {cat:'role', q:'What\'s a product area at Google where you think the frontend could be meaningfully better?', hint:'Have a specific, respectful example. Show you\'ve used the product.'}
+];
+function renderPrep(filter){
+  const list = document.getElementById('prepList');
+  const items = filter==='all'?prepQuestions:prepQuestions.filter(p=>p.cat===filter);
+  const catColor = {technical:'indigo-brand',hr:'rose-brand',project:'amber-brand',skill:'sage',role:'ink'};
+  list.innerHTML = items.map((p,i)=>`
+    <div class="border border-ink/8 rounded-2xl bg-white overflow-hidden">
+      <button class="prep-head w-full flex items-start gap-3 p-5 text-left" aria-expanded="false">
+        <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-${catColor[p.cat]} text-white shrink-0 uppercase">${p.cat}</span>
+        <span class="font-display text-lg font-semibold flex-1 pr-3">${p.q}</span>
+        <span class="w-8 h-8 rounded-full bg-ink/5 flex items-center justify-center shrink-0 transition-transform prep-icon">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </button>
+      <div class="prep-body acc-body">
+        <div class="px-5 pb-5 pl-16">
+          <div class="text-xs font-semibold text-amber-brand uppercase tracking-wider mb-1">How to approach</div>
+          <p class="text-sm text-ink/70 leading-relaxed">${p.hint}</p>
+          <div class="mt-3 flex gap-2">
+            <button class="text-xs px-3 py-1.5 rounded-lg bg-sage/10 text-sage font-semibold">Mark as practiced</button>
+            <button class="text-xs px-3 py-1.5 rounded-lg bg-ink/5 text-ink/60 font-medium">Skip</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.prep-head').forEach(h=>{
+    h.addEventListener('click',()=>{
+      const body = h.nextElementSibling;
+      const icon = h.querySelector('.prep-icon');
+      const open = body.style.maxHeight && body.style.maxHeight!=='0px';
+      list.querySelectorAll('.prep-body').forEach(b=>b.style.maxHeight='0px');
+      list.querySelectorAll('.prep-icon').forEach(i=>i.style.transform='rotate(0)');
+      if(!open){ body.style.maxHeight = body.scrollHeight+'px'; icon.style.transform='rotate(180deg)'; }
+    });
+  });
+}
+document.querySelectorAll('.prep-filter').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.prep-filter').forEach(x=>{x.classList.remove('bg-indigo-brand','text-white'); x.classList.add('bg-white','border','border-ink/10');});
+  b.classList.add('bg-indigo-brand','text-white'); b.classList.remove('bg-white','border','border-ink/10');
+  renderPrep(b.dataset.filter);
+}));
+
+/* =================== INIT =================== */
+function initFromHash(){
+  const h = location.hash.replace('#','');
+  const valid = ['landing','analyze','dashboard','report','interview','history','help','privacy'];
+  routeTo(valid.includes(h)?h:'landing', false);
+}
+initFromHash();
+window.addEventListener('hashchange',initFromHash);
+</script>
+</body>
+</html>
